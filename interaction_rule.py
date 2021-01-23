@@ -3,6 +3,7 @@ os.environ['OPENBLAS_NUM_THREADS'] ='1'
 
 import numpy as np 
 from scipy.integrate import odeint
+from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import time 
 import pandas as pd
@@ -103,7 +104,7 @@ def change_rule(number_opinion):
                 change_matrix[i, index] += 1/len_result
     return change_matrix
 
-def mf_ode(x, t, number_opinion):
+def mf_ode(x, t, c_matrix):
     """TODO: Docstring for mf_ode.
 
     :arg1: TODO
@@ -112,8 +113,6 @@ def mf_ode(x, t, number_opinion):
     """
     length = len(x)
     x_matrix = x.reshape(length, 1) * x.reshape(1, length)
-    coefficient = change_rule(number_opinion)
-    c_matrix = coefficient.reshape(length, length, length).transpose(2, 0, 1) 
     dxdt = np.sum(c_matrix * x_matrix, (1, 2))
     return dxdt
 
@@ -129,11 +128,14 @@ def ode_stable(number_opinion, committed_fraction, single_fraction):
     end = 100
     difference = 1
     single_fraction1 = single_fraction
-    mixed_fraction = np.zeros((2**number_opinion -1 -number_opinion))
-    while abs(difference) > 1e-10:
+    length = 2**number_opinion -1 + number_opinion
+    mixed_fraction = np.zeros(( length-2*number_opinion))
+    coefficient = change_rule(number_opinion)
+    c_matrix = np.round(coefficient.reshape(length, length, length).transpose(2, 0, 1) , 15)
+    while abs(difference) > 1e-15:
         t = np.arange(start, end, 0.01)
         initial_state = np.hstack(([single_fraction1, committed_fraction, mixed_fraction]))
-        result = odeint(mf_ode, initial_state, t, args=(number_opinion,))
+        result = odeint(mf_ode, initial_state, t, args=(c_matrix,))
         single_fraction2 = result[-1, :number_opinion]
         mixed_fraction = result[-1, 2*number_opinion:]
         difference = sum(single_fraction2 - single_fraction1)
@@ -208,12 +210,12 @@ def attractors(number_opinion, committed_fraction, des_file):
     print(committed_fraction)
     attractor_list = []
     uncommitted_fraction = 1 - sum(committed_fraction)
-    for a in np.arange(0, uncommitted_fraction, 0.1):
-        for b in np.arange(0, uncommitted_fraction-a, 0.1):
+    for a in np.arange(0, uncommitted_fraction+1e-6, 0.01):
+        for b in np.arange(0, uncommitted_fraction-a+1e-6, 0.01):
             c = uncommitted_fraction-a-b
             single_fraction = np.array([a, b, c])
             attractor = ode_stable(number_opinion, committed_fraction, single_fraction)
-            print(a, b, c, attractor)
+            #print(single_fraction, attractor)
             attractor_list.append(attractor)
     attractor_unique = np.unique(np.round(np.vstack((attractor_list)), 4), axis=0)
     data = np.hstack((committed_fraction, np.ravel(attractor_unique)))
@@ -251,5 +253,12 @@ for p in np.arange(0, 0.15, 0.05):
             committed_fraction_list.append(committed_fraction)
 committed_fraction_list = np.vstack((committed_fraction_list))
 
+
+#committed_fraction = np.array([0.01, 0.01, 0.01])
+t1 = time.time()
+#attractor_list = attractors(number_opinion, committed_fraction, '../data')
 parallel_attractors(number_opinion, committed_fraction_list)
 t2 = time.time()
+
+
+# more than one iteration odeint issue
