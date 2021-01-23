@@ -104,19 +104,18 @@ def change_rule(number_opinion):
                 change_matrix[i, index] += 1/len_result
     return change_matrix
 
-def mf_ode(x, t, c_matrix):
+def mf_ode(x, t, length, c_matrix):
     """TODO: Docstring for mf_ode.
 
     :arg1: TODO
     :returns: TODO
 
     """
-    length = len(x)
-    x_matrix = x.reshape(length, 1) * x.reshape(1, length)
+    x_matrix = np.dot(x.reshape(length, 1) , x.reshape(1, length))
     dxdt = np.sum(c_matrix * x_matrix, (1, 2))
     return dxdt
 
-def ode_stable(number_opinion, committed_fraction, single_fraction):
+def ode_stable(number_opinion, committed_fraction, single_fraction, c_matrix):
     """TODO: Docstring for ode_stable.
 
     :number_opinion: TODO
@@ -130,12 +129,10 @@ def ode_stable(number_opinion, committed_fraction, single_fraction):
     single_fraction1 = single_fraction
     length = 2**number_opinion -1 + number_opinion
     mixed_fraction = np.zeros(( length-2*number_opinion))
-    coefficient = change_rule(number_opinion)
-    c_matrix = np.round(coefficient.reshape(length, length, length).transpose(2, 0, 1) , 15)
     while abs(difference) > 1e-15:
         t = np.arange(start, end, 0.01)
         initial_state = np.hstack(([single_fraction1, committed_fraction, mixed_fraction]))
-        result = odeint(mf_ode, initial_state, t, args=(c_matrix,))
+        result = odeint(mf_ode, initial_state, t, args=(length, c_matrix))
         single_fraction2 = result[-1, :number_opinion]
         mixed_fraction = result[-1, 2*number_opinion:]
         difference = sum(single_fraction2 - single_fraction1)
@@ -207,22 +204,28 @@ def attractors(number_opinion, committed_fraction, des_file):
 
     """
 
-    print(committed_fraction)
+    t1 = time.time()
     attractor_list = []
     uncommitted_fraction = 1 - sum(committed_fraction)
+    length = 2**number_opinion -1 + number_opinion
+    coefficient = change_rule(number_opinion)
+    c_matrix = np.round(coefficient.reshape(length, length, length).transpose(2, 0, 1) , 15)
     for a in np.arange(0, uncommitted_fraction+1e-6, 0.01):
         for b in np.arange(0, uncommitted_fraction-a+1e-6, 0.01):
             c = uncommitted_fraction-a-b
             single_fraction = np.array([a, b, c])
-            attractor = ode_stable(number_opinion, committed_fraction, single_fraction)
+            attractor = ode_stable(number_opinion, committed_fraction, single_fraction, c_matrix)
             #print(single_fraction, attractor)
             attractor_list.append(attractor)
     attractor_unique = np.unique(np.round(np.vstack((attractor_list)), 4), axis=0)
     data = np.hstack((committed_fraction, np.ravel(attractor_unique)))
     df_data = pd.DataFrame(data.reshape(1, len(data)))
-    df_data.to_csv(des_file, index=None, header=None, mode='a')
+    #df_data.to_csv(des_file, index=None, header=None, mode='a')
 
-    return attractor_unique
+    t2 = time.time()
+    print(committed_fraction, t2-t1, attractor_unique)
+
+    return None
 
 def parallel_attractors(number_opinion, committed_fraction_list):
     """TODO: Docstring for parallel_attractors.
@@ -254,10 +257,10 @@ for p in np.arange(0, 0.15, 0.05):
 committed_fraction_list = np.vstack((committed_fraction_list))
 
 
-#committed_fraction = np.array([0.01, 0.01, 0.01])
+committed_fraction = np.array([0.05, 0.05, 0.14])
 t1 = time.time()
-#attractor_list = attractors(number_opinion, committed_fraction, '../data')
-parallel_attractors(number_opinion, committed_fraction_list)
+attractor_list = attractors(number_opinion, committed_fraction, '../data')
+#parallel_attractors(number_opinion, committed_fraction_list)
 t2 = time.time()
 
 
