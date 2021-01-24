@@ -10,7 +10,7 @@ import pandas as pd
 import multiprocessing as mp
 from itertools import combinations
 
-cpu_number = 10
+cpu_number = 40
 
 def transition_rule(s1, s2):
     """states after interaction (speaker-listenser) 7 states: A, B, C, AB, AC, BC, ABC
@@ -129,13 +129,13 @@ def ode_stable(number_opinion, committed_fraction, single_fraction, c_matrix):
     single_fraction1 = single_fraction
     length = 2**number_opinion -1 + number_opinion
     mixed_fraction = np.zeros(( length-2*number_opinion))
-    while abs(difference) > 1e-15:
+    while abs(difference) > 1e-14:
         t = np.arange(start, end, 0.01)
         initial_state = np.hstack(([single_fraction1, committed_fraction, mixed_fraction]))
         result = odeint(mf_ode, initial_state, t, args=(length, c_matrix))
         single_fraction2 = result[-1, :number_opinion]
         mixed_fraction = result[-1, 2*number_opinion:]
-        difference = sum(single_fraction2 - single_fraction1)
+        difference = sum(abs(single_fraction2 - single_fraction1))
         single_fraction1 = single_fraction2
     return single_fraction1
     
@@ -206,16 +206,16 @@ def attractors(number_opinion, committed_fraction, des_file):
 
     t1 = time.time()
     attractor_list = []
-    uncommitted_fraction = 1 - sum(committed_fraction)
+    uncommitted_fraction = np.round(1 - sum(committed_fraction), digit)
     length = 2**number_opinion -1 + number_opinion
     coefficient = change_rule(number_opinion)
     c_matrix = np.round(coefficient.reshape(length, length, length).transpose(2, 0, 1) , 15)
     for a in np.arange(0, uncommitted_fraction+1e-6, 0.01):
         for b in np.arange(0, uncommitted_fraction-a+1e-6, 0.01):
             c = uncommitted_fraction-a-b
-            single_fraction = np.array([a, b, c])
+            single_fraction = np.round(np.array([a, b, c]), digit)
             attractor = ode_stable(number_opinion, committed_fraction, single_fraction, c_matrix)
-            #print(single_fraction, attractor)
+            print(single_fraction, attractor)
             attractor_list.append(attractor)
     attractor_unique = np.unique(np.round(np.vstack((attractor_list)), 4), axis=0)
     data = np.hstack((committed_fraction, np.ravel(attractor_unique)))
@@ -247,17 +247,18 @@ def parallel_attractors(number_opinion, committed_fraction_list):
     return None
 
 number_opinion = 3
+digit = 2
 
 committed_fraction_list = []
-for p in np.arange(0, 0.15, 0.05):
-    for q in np.arange(0, min(1-p, 0.15), 0.05):
-        for r in np.arange(0, min(1-p-q, 0.15), 0.05):
+for p in np.arange(0, 0.15, 0.01):
+    for q in np.arange(0, min(1-p, 0.15), 0.01):
+        for r in np.arange(0, min(1-p-q, 0.15), 0.01):
             committed_fraction = np.array([p, q, r])
             committed_fraction_list.append(committed_fraction)
-committed_fraction_list = np.vstack((committed_fraction_list))
+committed_fraction_list = np.round(np.vstack((committed_fraction_list)), digit)
 
 
-committed_fraction = np.array([0.05, 0.05, 0.14])
+committed_fraction = np.round(np.array([0.04, 0, 0.03]), digit)
 t1 = time.time()
 attractor_list = attractors(number_opinion, committed_fraction, '../data')
 #parallel_attractors(number_opinion, committed_fraction_list)
