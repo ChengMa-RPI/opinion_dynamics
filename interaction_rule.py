@@ -824,9 +824,9 @@ def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, norma
         cA_tilde = p + p_fluctuate 
         if normalization: 
             cA_tilde = cA_tilde/ sum(cA_tilde) * p * (number_opinion-2)
-            des_file = f'oneuncommitted_p={p}_sigma={sigma}_seed={seed}_normalization.csv'
+            des_file = des  + f'oneuncommitted_p={p}_sigma={sigma}_seed={seed}_normalization.csv'
         else:
-            des_file = f'oneuncommitted_p={p}_sigma={sigma}_seed={seed}.csv'
+            des_file = des + f'oneuncommitted_p={p}_sigma={sigma}_seed={seed}.csv'
         for cA in cA_list:
             committed_fraction = np.round(np.hstack((cA, cA_tilde, 0)), 14)
             uC = 1 - sum(committed_fraction)
