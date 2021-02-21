@@ -758,7 +758,45 @@ def approximation(number_opinion):
     plt.show()
     return attractors
 
-def approximation_oneuncommitted(number_opinion):
+def attractors_approximation(number_opinion, committed_fraction, length, coefficient, des_file):
+    """TODO: Docstring for attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :single_fraction: TODO
+    :returns: TODO
+
+    """
+    t1 = time.time()
+    initial_state = np.zeros((length))
+    initial_state[3:5] = committed_fraction  
+    initial_state[1] = 1- sum(committed_fraction)
+    t = np.arange(0, 500, 0.01)
+    result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1]
+    data = np.hstack((committed_fraction, result))
+    df_data = pd.DataFrame(data.reshape(1, len(data)))
+    df_data.to_csv(des_file, index=None, header=None, mode='a')
+    t2 = time.time()
+    #print(committed_fraction, t2-t1)
+    return None
+
+def parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file):
+    """TODO: Docstring for parallel_attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :returns: TODO
+
+    """
+    coefficient = c_approximation(number_opinion)
+    length = np.size(coefficient, 0)
+    p = mp.Pool(cpu_number)
+    p.starmap_async(attractors_approximation, [(number_opinion, committed_fraction, length, coefficient, des_file) for committed_fraction in committed_fraction_list]).get()
+    p.close()
+    p.join()
+    return None
+
+def approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list):
     """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
 
     :number_opinion: TODO
@@ -770,38 +808,13 @@ def approximation_oneuncommitted(number_opinion):
     if not os.path.exists(des):
         os.makedirs(des)
     des_file = des + f'num_opinion={number_opinion}_oneuncommitted_approximation.csv'
-    coefficient = c_approximation(number_opinion)
-    length = np.size(coefficient, 0)
-    t = np.arange(0, 500, 0.01)
-    pA_list = np.round(np.arange(0, 0.2, 0.002), 3)
-    p_not_A_list = np.round(np.arange(0, 0.4, 0.01), 3)
-    attractors = np.zeros((len(pA_list), len(p_not_A_list)))
+    committed_fraction_list = []
     for pA, i in zip(pA_list, range(len(pA_list))):
         for p_not_A, j in zip(p_not_A_list, range(len(p_not_A_list))):
-            initial_state = np.zeros((length))
-            initial_state[3] = pA
-            initial_state[4] = p_not_A
-            committed_fraction = initial_state[3:5]
-            initial_state[1] = 1- pA-p_not_A
-            result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1]
+            committed_fraction_list.append([pA, p_not_A])
+    parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file)
+    return None
 
-            data = np.hstack((committed_fraction, result))
-            df_data = pd.DataFrame(data.reshape(1, len(data)))
-            df_data.to_csv(des_file, index=None, header=None, mode='a')
-
-            attractors[i, j] = np.round(result[0], 4)
-
-    for p_not_A, j  in zip(p_not_A_list, range(len(p_not_A_list))):
-        plt.plot(pA_list, attractors[:, j] + pA_list, '--', label='$P_{c\\tilde{A}}=$' + str(p_not_A), alpha=alpha, linewidth=lw)
-    plt.xlabel('$P_{cA}$', fontsize=fontsize)
-    plt.ylabel('$p_A^s$', fontsize=fontsize)
-    plt.subplots_adjust(left=0.17, right=0.98, wspace=0.25, hspace=0.25, bottom=0.15, top=0.98)
-    plt.xticks(fontsize=ticksize)
-    plt.yticks(fontsize=ticksize)
-    plt.locator_params(nbins=5)
-    plt.legend(frameon=False, fontsize = legendsize)
-    #plt.show()
-    return attractors
 
 
 def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, normalization):
@@ -813,7 +826,7 @@ def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, norma
     :returns: TODO
 
     """
-    des = '../data/num_opinion={number_opinion}_absolute/'
+    des = f'../data/num_opinion={number_opinion}_absolute/'
     if not os.path.exists(des):
         os.makedirs(des)
 
@@ -880,16 +893,18 @@ des_file = f'num_opinion={number_opinion}_oneuncommitted.csv'
 committed_fraction = np.array([0.08, 0.08, 0.08, 0])
 single_fraction = np.array([0, 0, 0, 1-np.sum(committed_fraction)])
 #one_realization(4, committed_fraction, single_fraction)
-number_opinion_list = [11, 12, 13, 14]
+number_opinion_list = [6, 7, 8, 9, 10]
+pA_list = np.round(np.arange(0, 0.2, 0.0005), 4)
+p_not_A_list = np.round(np.arange(0, 0.4, 0.01), 3)
 for number_opinion in number_opinion_list:
-    #approximation_oneuncommitted(number_opinion)
+    #approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list)
     pass
 
 
 number_opinion = 4
-cA_list = np.arange(0, 0.2, 0.002)
-p = 0.06
-sigma=0.02
+cA_list = np.arange(0.07, 0.10, 0.0001)
+p = 0.03
+sigma= 0.02
 seed_list = np.arange(100).tolist()
 normalization = 1
 fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, normalization)
