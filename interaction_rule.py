@@ -616,7 +616,8 @@ def attractors_approximation(number_opinion, committed_fraction, length, coeffic
     initial_state[3:5] = committed_fraction  
     initial_state[1] = 1- sum(committed_fraction)
     t = np.arange(0, 500, 0.01)
-    result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1]
+    #result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1]
+    result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1, :3]
     data = np.hstack((committed_fraction, result))
     df_data = pd.DataFrame(data.reshape(1, len(data)))
     df_data.to_csv(des_file, index=None, header=None, mode='a')
@@ -691,7 +692,6 @@ def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, norma
             single_fraction_list.append(single_fraction)
         parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
     return None
-
 
 def reduce_state_two(number_opinion):
     """TODO: Docstring for reduce_state.
@@ -824,7 +824,6 @@ def approximation_oneuncommitted_two(number_opinion, p_not_A_list):
     parallel_attractors_approximation_two(number_opinion, committed_fraction_list, des_file)
     return None
 
-
 def polarization():
     """TODO: Docstring for plorization.
 
@@ -851,6 +850,28 @@ def polarization():
                 single_fraction_list.append(single_fraction)
         parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
         
+def parallel_attractors_lowerbound(number_opinion_list, committed_fraction_list, des_file):
+    """TODO: Docstring for parallel_attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :returns: TODO
+
+    """
+    number_opinion_unique = np.unique(number_opinion_list)
+    coefficient_list = []
+    length_list = []
+    for number_opinion in number_opinion_unique:
+        coefficient = c_approximation(number_opinion)
+        length = np.size(coefficient, 0)
+        coefficient_list.append(coefficient)
+        length_list.append(length)
+    p = mp.Pool(cpu_number)
+    p.starmap_async(attractors_approximation, [(number_opinion, committed_fraction, length_list[np.where(number_opinion == number_opinion_unique)[0][0]], coefficient_list[np.where(number_opinion == number_opinion_unique)[0][0]], des_file) for number_opinion, committed_fraction in zip(number_opinion_list, committed_fraction_list)]).get()
+    p.close()
+    p.join()
+    return None
+
 def fluctuate_lowerbound(number_opinion, p):
     """TODO: introduce fluctuations to the initial committed fractions p.
 
@@ -865,18 +886,49 @@ def fluctuate_lowerbound(number_opinion, p):
     if not os.path.exists(des):
         os.makedirs(des)
     committed_fraction_list = []
+    single_fraction_list = []
+    number_opinion_list = []
     p_cAtilde = p * (number_opinion-2)
     pmax_list = np.arange(p, p_cAtilde, 0.0001)
     for pmax in pmax_list:
-        n_max = np.floor(p_cAtilde/pmax)
+        n_max = int(np.floor(p_cAtilde/pmax))
         p_cCtilde = pmax + pmax * n_max
         p_cC = p_cAtilde - pmax * n_max
 
         committed_fraction = np.round(np.hstack((p_cC, p_cCtilde)), 14)
         committed_fraction_list.append(committed_fraction)
+        number_opinion_list.append(n_max + 3)
 
-    parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file)
+    parallel_attractors_lowerbound(number_opinion_list, committed_fraction_list, des_file)
     return None
+
+def fluctuate_lowerbound2(number_opinion, p):
+    """TODO: Docstring for fluctuate_lowerbound2.
+
+    :number_opinion: TODO
+    :p: TODO
+    :returns: TODO
+
+    """
+    des = f'../data/lowerbound2/'
+    des_file = des  + f'oneuncommitted_p={p}.csv'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    committed_fraction_list = []
+    single_fraction_list = []
+    p_cAtilde = p * (number_opinion-2)
+    p_cA_list = np.arange(0, 0.1, 0.0001)
+    for p_cA in p_cA_list:
+
+        committed_fraction = np.round(np.hstack((p_cA, 0, p_cAtilde)), 14)
+        single_fraction = np.hstack((0, 1-sum(committed_fraction), 0))
+        committed_fraction_list.append(committed_fraction)
+        single_fraction_list.append(single_fraction)
+
+    parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
+    return None
+
+
 
 
 
@@ -898,7 +950,6 @@ initial_single = np.array([0., 0.485-1e-6, 0.475+1e-6])
 #basin_attraction(number_opinion, committed_fraction)
 t1 = time.time()
 #attractor_list = attractors(number_opinion, committed_fraction, '../data')
-#parallel_attractors(number_opinion, committed_fraction_list)
 t2 = time.time()
 
 number_opinion = 4
@@ -918,17 +969,16 @@ des_file = f'num_opinion={number_opinion}_oneuncommitted.csv'
 
 
 
-committed_fraction = np.array([0.08, 0.08, 0.08, 0])
-single_fraction = np.array([0, 0, 0, 1-np.sum(committed_fraction)])
-#one_realization(4, committed_fraction, single_fraction)
-number_opinion_list = [3]
-pA_list = np.round(np.arange(0, 0.4, 0.0001), 4)
-p_not_A_list = np.round(np.arange(0, 0.4, 0.01), 3)
+""
+number_opinion_list = [4]
+pA_list = np.round(np.arange(0, 0.2, 0.0001), 4)
+p_not_A_list = np.round(np.arange(0, 0.2, 0.001), 3)
 for number_opinion in number_opinion_list:
-    #approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list)
+    approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list)
     pass
 
 
+"Introduce fluctuations"
 number_opinion = 5
 cA_list = np.arange(0.06, 0.10, 0.0001)
 p = 0.07
@@ -948,6 +998,15 @@ for number_opinion in number_opinion_list:
     #approximation_oneuncommitted_two(number_opinion, pA_list)
     pass
 
-number_opinion = 4
-p = 0.04
-fluctuate_lowerbound(number_opinion, p)
+number_opinion = 3
+p_list = np.round(np.arange(0.005, 0.4, 0.005), 3)
+for p in p_list:
+    #fluctuate_lowerbound2(number_opinion, p)
+    pass
+p_list =  [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065]
+p_list = [0.048]
+
+for number_opinion in [6]:
+    for p in p_list:
+        #fluctuate_lowerbound(number_opinion, p)
+        pass
