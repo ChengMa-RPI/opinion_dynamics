@@ -275,133 +275,6 @@ def c_approximation(number_opinion):
         c_approx2[:, :, i] = np.average(c_approx1[:, :, index_combine], weights=[1] * len(index_combine), axis=2)
     return c_approx2
 
-def c_approximation_ABCD():
-    """TODO: Docstring for change_rule.
-
-    :number_opinion: TODO
-    :returns: TODO
-
-    """
-    number_opinion = 4
-    possible_state = all_state(number_opinion)
-    reduce_state =['A', 'A~', 'D', 'a', 'a~', 'AA~', 'AD', 'A~A~', 'A~D', 'AA~A~', 'AA~D', 'A~A~D', 'AA~A~D']
-    transition_before_list = []
-    transition_after_list = []
-    for s1 in possible_state:
-        for s2 in possible_state:
-            transition_before_list.append([s1, s2])
-            transition_after_list.append(transition_rule(s1, s2))
-    interaction_num = len(transition_after_list)
-    change_matrix = np.zeros((interaction_num, len(reduce_state)))
-    for i in range(interaction_num):
-        transition_after = transition_after_list[i]
-        transition_before = transition_before_list[i]
-        len_result = len(transition_after)
-        for x in transition_before:
-            if x !='d':
-                x_approx = x.replace('B', 'A~').replace('C', 'A~').replace('b', 'a~').replace('c', 'a~')
-                index = reduce_state.index(x_approx)
-                change_matrix[i, index] -= 1
-            
-        for one_result in transition_after:
-            for x in one_result:
-                if x !='d':
-                    x_approx = x.replace('B', 'A~').replace('C', 'A~').replace('b', 'a~').replace('c', 'a~')
-                    index = reduce_state.index(x_approx)
-                    change_matrix[i, index] += 1/len_result
-    num_all_state = len(possible_state)
-    num_reduce_state = len(reduce_state)
-    c = change_matrix.transpose().reshape(num_reduce_state, num_all_state, num_all_state)
-    c_approx1 = np.zeros((num_reduce_state, num_reduce_state, num_all_state))
-    c_approx1[:, 0, :] = c[:, 0, :]
-    c_approx1[:, 1, :] = np.average(c[:, 1:3, :], weights=[1,1], axis=1)
-    c_approx1[:, 2:4, :] = c[:, 3:5, :]
-    c_approx1[:, 4, :] = np.average(c[:, 5:7, :], weights=[1,1], axis=1)
-    c_approx1[:, 5, :] = np.average(c[:, 8:10, :], weights=[1,1], axis=1)
-    c_approx1[:, 6:8, :] = c[:, 10:12, :]
-    c_approx1[:, 8, :] = np.average(c[:, 12:14, :], weights=[1,1], axis=1)
-    c_approx1[:, 9, :] = c[:, 14, :]
-    c_approx1[:, 10, :] = np.average(c[:, 15:17, :], weights=[1,1], axis=1)
-    c_approx1[:, 11:, :] = c[:, 17:, :]
-
-    c_approx2 = np.zeros((num_reduce_state, num_reduce_state, num_reduce_state))
-
-    c_approx2[:, :, 0] = c_approx1[:, :, 0]
-    c_approx2[:, :, 1] = np.average(c_approx1[:, :, 1:3], weights=[1,1], axis=2)
-    c_approx2[:, :, 2:4] = c_approx1[:, :, 3:5]
-    c_approx2[:, :, 4] = np.average(c_approx1[:, :, 5:7], weights=[1,1], axis=2)
-    c_approx2[:, :, 5] = np.average(c_approx1[:, :, 8:10], weights=[1,1], axis=2)
-    c_approx2[:, :, 6:8] = c_approx1[:, :, 10:12]
-    c_approx2[:, :, 8] = np.average(c_approx1[:, :, 12:14], weights=[1,1], axis=2)
-    c_approx2[:, :, 9] = c_approx1[:, :, 14]
-    c_approx2[:, :, 10] = np.average(c_approx1[:, :, 15:17], weights=[1,1], axis=2)
-    c_approx2[:, :, 11:] = c_approx1[:, :, 17:]
-    return c_approx2
-
-def c_approximation_four():
-    """TODO: Docstring for change_rule.
-
-    :number_opinion: TODO
-    :returns: TODO
-
-    """
-    number_opinion = 4
-    possible_state = all_state(number_opinion)
-    reduce_state =['A', 'B', '~A', 'a', '~a', 'AB', 'A~A', 'B~A', '~A~A', 'AB~A', 'A~A~A', 'B~A~A', 'AB~A~A']
-    transition_before_list = []
-    transition_after_list = []
-    for s1 in possible_state:
-        for s2 in possible_state:
-            transition_before_list.append([s1, s2])
-            transition_after_list.append(transition_rule(s1, s2))
-    interaction_num = len(transition_after_list)
-    change_matrix = np.zeros((interaction_num, len(reduce_state)))
-    for i in range(interaction_num):
-        transition_after = transition_after_list[i]
-        transition_before = transition_before_list[i]
-        len_result = len(transition_after)
-        for x in transition_before:
-            if x !='b':
-                x_approx = x.replace('C', '~A').replace('D', '~A').replace('c', '~a').replace('d', '~a')
-                index = reduce_state.index(x_approx)
-                change_matrix[i, index] -= 1
-            
-        for one_result in transition_after:
-            for x in one_result:
-                if x !='b':
-                    x_approx = x.replace('C', '~A').replace('D', '~A').replace('c', '~a').replace('d', '~a')
-                    index = reduce_state.index(x_approx)
-                    change_matrix[i, index] += 1/len_result
-    num_all_state = len(possible_state)
-    num_reduce_state = len(reduce_state)
-    c = change_matrix.transpose().reshape(num_reduce_state, num_all_state, num_all_state)
-    c_approx1 = np.zeros((num_reduce_state, num_reduce_state, num_all_state))
-    c_approx1[:, 0, :] = c[:, 0, :]
-    c_approx1[:, 1, :] = np.average(c[:, [1], :], weights=[1], axis=1)
-    c_approx1[:, 2, :] = np.average(c[:, [2, 3], :], weights=[1, 1], axis=1)
-    c_approx1[:, 3, :] = c[:, 4, :]
-    c_approx1[:, 4, :] = np.average(c[:, [6, 7], :], weights=[1,1], axis=1)
-    c_approx1[:, 5, :] = np.average(c[:, [8], :], weights=[1], axis=1)
-    c_approx1[:, 6, :] = np.average(c[:, [9, 10], :], weights=[1, 1], axis=1)
-    c_approx1[:, 7, :] = np.average(c[:, [11, 12], :], weights=[1, 1], axis=1)
-    c_approx1[:, 8, :] = c[:, 13, :]
-    c_approx1[:, 9, :] = np.average(c[:, [14, 15], :], weights=[1,1], axis=1)
-    c_approx1[:, 10:, :] = c[:, 16:, :]
-
-    c_approx2 = np.zeros((num_reduce_state, num_reduce_state, num_reduce_state))
-
-    c_approx2[:, :, 0:2] = c_approx1[:, :, 0:2]
-    c_approx2[:, :, 2] = np.average(c_approx1[:, :, 2:4], weights=[1,1], axis=2)
-    c_approx2[:, :, 3] = c_approx1[:, :, 4]
-    c_approx2[:, :, 4] = np.average(c_approx1[:, :, 6:8], weights=[1,1], axis=2)
-    c_approx2[:, :, 5] = c_approx1[:, :, 8]
-    c_approx2[:, :, 6] = np.average(c_approx1[:, :, 9:11], weights=[1,1], axis=2)
-    c_approx2[:, :, 7] = np.average(c_approx1[:, :, 11:13], weights=[1,1], axis=2)
-    c_approx2[:, :, 8] = c_approx1[:, :, 13]
-    c_approx2[:, :, 9] = np.average(c_approx1[:, :, 14:16], weights=[1,1], axis=2)
-    c_approx2[:, :, 10:] = c_approx1[:, :, 16:]
-    return c_approx2
-
 def mf_ode(x, t, length, c_matrix):
     """TODO: Docstring for mf_ode.
 
@@ -593,7 +466,7 @@ def attractors(number_opinion, committed_fraction, single_fraction, c_matrix, de
     df_data = pd.DataFrame(data.reshape(1, len(data)))
     df_data.to_csv(des_file, index=None, header=None, mode='a')
     t2 = time.time()
-    print(committed_fraction, t2-t1, attractor)
+    #print(committed_fraction, t2-t1, attractor)
     return None
 
 def parallel_attractors_full(number_opinion, committed_fraction_list):
@@ -729,35 +602,6 @@ def pA_BC(number_opinion):
     #plt.show()
     return attractors
 
-def approximation(number_opinion):
-    """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
-
-    :number_opinion: TODO
-    :: TODO
-    :returns: TODO
-
-    """
-    coefficient =  c_approximation(number_opinion)
-    length = 6
-    t = np.arange(0, 1000, 0.01)
-    pA_list = np.arange(0, 0.2, 0.002)
-    attractors = np.zeros((len(pA_list), 2))
-    for pA, i in zip(pA_list, range(len(pA_list))):
-        initial_state = np.array([0, 1-pA, pA, 0, 0, 0])
-        result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1]
-        attractors[i] = np.round(result[:2], 4)
-
-    plt.plot(pA_list, attractors[:, 0] + pA_list, '--', label='approximation', alpha=alpha)
-    plt.xlabel('$p_A$', fontsize=fontsize)
-    plt.ylabel('$x_A^s$', fontsize=fontsize)
-    plt.subplots_adjust(left=0.17, right=0.98, wspace=0.25, hspace=0.25, bottom=0.15, top=0.98)
-    plt.xticks(fontsize=ticksize)
-    plt.yticks(fontsize=ticksize)
-    plt.locator_params(nbins=5)
-    plt.legend(frameon=False, fontsize = legendsize)
-    plt.show()
-    return attractors
-
 def attractors_approximation(number_opinion, committed_fraction, length, coefficient, des_file):
     """TODO: Docstring for attractors.
 
@@ -815,8 +659,6 @@ def approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list):
     parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file)
     return None
 
-
-
 def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, normalization):
     """TODO: introduce fluctuations to the initial committed fractions p.
 
@@ -831,6 +673,7 @@ def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, norma
         os.makedirs(des)
 
     for seed in seed_list:
+        print(seed)
         committed_fraction_list = []
         single_fraction_list = []
         p_fluctuate = np.random.RandomState(seed).normal(0, sigma, number_opinion-2)
@@ -849,6 +692,191 @@ def fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, norma
         parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
     return None
 
+
+def reduce_state_two(number_opinion):
+    """TODO: Docstring for reduce_state.
+
+    :number_opinion: TODO
+    :returns: TODO
+
+    """
+    state = []
+    for length in range(1, number_opinion+1):
+        if length == 1:
+            state.extend(['A', '~A', '~a'])
+        elif length >1 and length <= number_opinion-1:
+            state.extend([i+ '~A' * (length-1) for i in ['A', '~A']])
+        elif length == number_opinion:
+            state.extend(['A' + '~A' * (length-1)])
+    return state
+
+def c_approximation_two(number_opinion):
+    """TODO: Docstring for change_rule.
+
+    :number_opinion: TODO
+    :returns: TODO
+
+    """
+    possible_state = all_state(number_opinion)
+    num_all_state = len(possible_state)
+    A_tilde = possible_state[1:number_opinion]
+    reduced = reduce_state_two(number_opinion)
+    index_list = []
+    for x in possible_state:
+        if x != 'a':
+            for single in A_tilde:
+                x = x.replace(single, '~A').replace(single.lower(), '~a')
+            index_list.append(reduced.index(x))
+        elif x == 'a':
+            index_list.append(-1)
+    num_reduce_state = len(reduced)
+    transition_before_list = []
+    transition_after_list = []
+    for s1 in possible_state:
+        for s2 in possible_state:
+            transition_before_list.append([s1, s2])
+            transition_after_list.append(transition_rule(s1, s2))
+    interaction_num = len(transition_after_list)
+    change_matrix = np.zeros((interaction_num, num_reduce_state))
+    for i in range(interaction_num):
+        transition_after = transition_after_list[i]
+        transition_before = transition_before_list[i]
+        len_result = len(transition_after)
+        for x in transition_before:
+            if x !='a':
+                for single in A_tilde:
+                    x = x.replace(single, '~A').replace(single.lower(), '~a')
+                #index = approximation_index(number_opinion, x_approx)
+                index = reduced.index(x)
+                change_matrix[i, index] -= 1
+            
+        for one_result in transition_after:
+            for x in one_result:
+                if x !='a':
+                    for single in A_tilde:
+                        x = x.replace(single, '~A').replace(single.lower(), '~a')
+                    #index = approximation_index(number_opinion, x_approx)
+                    index = reduced.index(x)
+                    change_matrix[i, index] += 1/len_result
+    c = change_matrix.transpose().reshape(num_reduce_state, num_all_state, num_all_state)
+    c_approx1 = np.zeros((num_reduce_state, num_reduce_state, num_all_state))
+    for i in range(num_reduce_state):
+        index_combine = np.where(np.array(index_list) == i)[0]
+        c_approx1[:, i, :] = np.average(c[:, index_combine, :], weights=[1] * len(index_combine), axis=1)
+
+    c_approx2 = np.zeros((num_reduce_state, num_reduce_state, num_reduce_state))
+    for i in range(num_reduce_state):
+        index_combine = np.where(np.array(index_list) == i)[0]
+        c_approx2[:, :, i] = np.average(c_approx1[:, :, index_combine], weights=[1] * len(index_combine), axis=2)
+    return c_approx2
+
+def attractors_approximation_two(number_opinion, committed_fraction, length, coefficient, des_file):
+    """TODO: Docstring for attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :single_fraction: TODO
+    :returns: TODO
+
+    """
+    t1 = time.time()
+    initial_state = np.zeros((length))
+    initial_state[2] = committed_fraction  
+    initial_state[0] = 1- committed_fraction
+    t = np.arange(0, 500, 0.01)
+    result = odeint(mf_ode, initial_state, t, args=(length, coefficient))[-1]
+    data = np.hstack((committed_fraction, result))
+    df_data = pd.DataFrame(data.reshape(1, len(data)))
+    df_data.to_csv(des_file, index=None, header=None, mode='a')
+    t2 = time.time()
+    #print(committed_fraction, t2-t1)
+    return None
+
+def parallel_attractors_approximation_two(number_opinion, committed_fraction_list, des_file):
+    """TODO: Docstring for parallel_attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :returns: TODO
+
+    """
+    coefficient = c_approximation_two(number_opinion)
+    length = np.size(coefficient, 0)
+    p = mp.Pool(cpu_number)
+    p.starmap_async(attractors_approximation_two, [(number_opinion, committed_fraction, length, coefficient, des_file) for committed_fraction in committed_fraction_list]).get()
+    p.close()
+    p.join()
+    return None
+
+def approximation_oneuncommitted_two(number_opinion, p_not_A_list):
+    """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
+
+    :number_opinion: TODO
+    :: TODO
+    :returns: TODO
+
+    """
+    des = '../data/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    des_file = des + f'num_opinion={number_opinion}_oneuncommitted_approximation_two.csv'
+    committed_fraction_list = p_not_A_list
+    parallel_attractors_approximation_two(number_opinion, committed_fraction_list, des_file)
+    return None
+
+
+def polarization():
+    """TODO: Docstring for plorization.
+
+    :arg1: TODO
+    :returns: TODO
+
+    """
+    number_opinion = 4
+    p_cA_list = np.arange(0, 0.1, 0.0001)
+    p_cAtilde = np.arange(0.01, 0.1, 0.01)
+    for p in p_cAtilde:
+        p = round(p, 2)
+        print(p)
+        committed_fraction_list = []
+        single_fraction_list = []
+        des_file = f'../data/polarization/P_cAtilde={p}.csv'
+        for p_cA in p_cA_list:
+            p_max_list = np.arange(p/2, p + 0.001, 0.01)
+            for p_max in p_max_list:
+                p_min = p - p_max
+                committed_fraction = np.array([p_cA, 0, p_max, p_min])
+                single_fraction = np.array([0, 1-sum(committed_fraction), 0, 0])
+                committed_fraction_list.append(committed_fraction)
+                single_fraction_list.append(single_fraction)
+        parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
+        
+def fluctuate_lowerbound(number_opinion, p):
+    """TODO: introduce fluctuations to the initial committed fractions p.
+
+    :number_opinion: TODO
+    :p: TODO
+    :sigma: TODO
+    :returns: TODO
+
+    """
+    des = f'../data/num_opinion={number_opinion}_lowerbound/'
+    des_file = des  + f'oneuncommitted_p={p}.csv'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    committed_fraction_list = []
+    p_cAtilde = p * (number_opinion-2)
+    pmax_list = np.arange(p, p_cAtilde, 0.0001)
+    for pmax in pmax_list:
+        n_max = np.floor(p_cAtilde/pmax)
+        p_cCtilde = pmax + pmax * n_max
+        p_cC = p_cAtilde - pmax * n_max
+
+        committed_fraction = np.round(np.hstack((p_cC, p_cCtilde)), 14)
+        committed_fraction_list.append(committed_fraction)
+
+    parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file)
+    return None
 
 
 
@@ -893,19 +921,33 @@ des_file = f'num_opinion={number_opinion}_oneuncommitted.csv'
 committed_fraction = np.array([0.08, 0.08, 0.08, 0])
 single_fraction = np.array([0, 0, 0, 1-np.sum(committed_fraction)])
 #one_realization(4, committed_fraction, single_fraction)
-number_opinion_list = [6, 7, 8, 9, 10]
-pA_list = np.round(np.arange(0, 0.2, 0.0005), 4)
+number_opinion_list = [3]
+pA_list = np.round(np.arange(0, 0.4, 0.0001), 4)
 p_not_A_list = np.round(np.arange(0, 0.4, 0.01), 3)
 for number_opinion in number_opinion_list:
     #approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list)
     pass
 
 
-number_opinion = 4
-cA_list = np.arange(0.07, 0.10, 0.0001)
-p = 0.03
-sigma= 0.02
+number_opinion = 5
+cA_list = np.arange(0.06, 0.10, 0.0001)
+p = 0.07
+sigma= 0.005
 seed_list = np.arange(100).tolist()
 normalization = 1
-fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, normalization)
+sigma_list = [0.005]
+p_list = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065]
+p_list = [0.005]
+for sigma in sigma_list:
+    for p in p_list:
+        #fluctuate_oneuncommitted(number_opinion, cA_list, p, sigma, seed_list, normalization)
+        pass
 
+
+for number_opinion in number_opinion_list:
+    #approximation_oneuncommitted_two(number_opinion, pA_list)
+    pass
+
+number_opinion = 4
+p = 0.04
+fluctuate_lowerbound(number_opinion, p)
