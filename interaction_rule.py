@@ -928,6 +928,39 @@ def fluctuate_lowerbound2(number_opinion, p):
     parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
     return None
 
+def five_lowerbound(number_opinion, p):
+    """TODO: Docstring for original_lowerbound.
+
+    :number_opinion: TODO
+    :returns: TODO
+
+    """
+    number_opinion = 5
+    des = f'../data/number_opinion={number_opinion}/original_lowerbound/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    des_file = des + f'p={p}.csv'
+    committed_fraction_list = []
+    single_fraction_list = []
+    p_cAtilde = (number_opinion - 2) * p
+    p_cA_list = np.arange(0, 0.1, 0.001)
+    p_cC_list = np.arange(0, 0.1, 0.001)
+    p_cD_list = np.arange(0, 0.1, 0.001)
+    for p_cC in p_cC_list:
+        print(p_cC)
+        for p_cD in p_cD_list:
+            p_cE = p_cAtilde - p_cC - p_cD
+            if p_cC >= p_cD and p_cD >= p_cE and p_cE>=0:
+                for p_cA in p_cA_list:
+                    
+                    committed_fraction = np.array([p_cA, 0, p_cC, p_cD, p_cE])
+                    single_fraction = np.array([0, 1-sum(committed_fraction), 0, 0, 0])
+                    committed_fraction_list.append(committed_fraction)
+                    single_fraction_list.append(single_fraction)
+    parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
+    return None 
+
+
 
 
 
@@ -974,7 +1007,7 @@ number_opinion_list = [4]
 pA_list = np.round(np.arange(0, 0.2, 0.0001), 4)
 p_not_A_list = np.round(np.arange(0, 0.2, 0.001), 3)
 for number_opinion in number_opinion_list:
-    approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list)
+    #approximation_oneuncommitted(number_opinion, pA_list, p_not_A_list)
     pass
 
 
@@ -999,14 +1032,17 @@ for number_opinion in number_opinion_list:
     pass
 
 number_opinion = 3
-p_list = np.round(np.arange(0.005, 0.4, 0.005), 3)
+p_list =  np.round(np.arange(0.07, 0.1, 0.001), 4)
 for p in p_list:
+    print(p)
     #fluctuate_lowerbound2(number_opinion, p)
     pass
-p_list =  [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065]
-p_list = [0.048]
-
-for number_opinion in [6]:
+p_list = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065]
+p_list =  np.arange(0.005, 0.06, 0.001)
+p_list = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065]
+p_list = [0.03]
+for number_opinion in [5]:
     for p in p_list:
         #fluctuate_lowerbound(number_opinion, p)
+        five_lowerbound(number_opinion, p)
         pass
