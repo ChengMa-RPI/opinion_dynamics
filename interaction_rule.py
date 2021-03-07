@@ -936,21 +936,22 @@ def five_lowerbound(number_opinion, p):
 
     """
     number_opinion = 5
-    des = f'../data/number_opinion={number_opinion}/original_lowerbound/'
+    des = f'../data/num_opinion={number_opinion}_original_lowerbound/'
     if not os.path.exists(des):
         os.makedirs(des)
-    des_file = des + f'p={p}.csv'
+    #des_file = des + f'p={p}.csv'
+    des_file = des + f'p={p}_zoomin2.csv'
     committed_fraction_list = []
     single_fraction_list = []
     p_cAtilde = (number_opinion - 2) * p
-    p_cA_list = np.arange(0, 0.1, 0.001)
-    p_cC_list = np.arange(0, 0.1, 0.001)
-    p_cD_list = np.arange(0, 0.1, 0.001)
+    p_cA_list = np.arange(0.0757+ 1e-7, 0.0758, 0.00001)
+    p_cC_list = np.arange(0.0757, 0.0758, 0.00001)
+    p_cD_list = np.arange(0, 0.1, 0.00001)
     for p_cC in p_cC_list:
         print(p_cC)
         for p_cD in p_cD_list:
             p_cE = p_cAtilde - p_cC - p_cD
-            if p_cC >= p_cD and p_cD >= p_cE and p_cE>=0:
+            if (p_cC - p_cD)>-1e-14 and (p_cD - p_cE)>-1e-14 and p_cE>=-1e-14:
                 for p_cA in p_cA_list:
                     
                     committed_fraction = np.array([p_cA, 0, p_cC, p_cD, p_cE])
@@ -965,8 +966,8 @@ def five_lowerbound(number_opinion, p):
 
 
 
-number_opinion = 3
-digit = 3
+number_opinion = 5
+digit = 4
 
 committed_fraction_list = []
 for p in np.arange(0, 0.15, 0.01):
@@ -977,8 +978,8 @@ for p in np.arange(0, 0.15, 0.01):
 committed_fraction_list = np.round(np.vstack((committed_fraction_list)), digit)
 
 
-committed_fraction = np.round(np.array([0.1, 0.1, 0.05]), digit)
-initial_single = np.array([0., 0.485-1e-6, 0.475+1e-6])
+committed_fraction = np.round(np.array([0.076, 0, 0.076, 0.000, 0.0127]), digit)
+initial_single = np.array([0., 1-sum(committed_fraction), 0, 0, 0])
 #one_realization(number_opinion, committed_fraction, initial_single)
 #basin_attraction(number_opinion, committed_fraction)
 t1 = time.time()
@@ -999,7 +1000,6 @@ for cA in cA_list:
         committed_fraction_list.append(committed_fraction)
         single_fraction_list.append(single_fraction)
 des_file = f'num_opinion={number_opinion}_oneuncommitted.csv'
-
 
 
 ""
