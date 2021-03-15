@@ -1046,22 +1046,38 @@ def compare_original_reduced(number_opinion, committed_fraction):
     initial_state = np.hstack(([single_fraction, committed_fraction, mixed_fraction]))
     result = odeint(mf_ode, initial_state, t, args=(length, c_matrix))
 
-    coefficient_approximation = c_approximation(number_opinion)
-    length_approximation = np.size(coefficient_approximation, 0)
-    initial_approximation = np.zeros((length_approximation))
-    initial_approximation[3:5] = np.array([committed_fraction[0], sum(committed_fraction[2:])])
-    initial_approximation[1] = 1- sum(committed_fraction)
-    result_approximation = odeint(mf_ode, initial_approximation, t, args=(length_approximation, coefficient_approximation))
+    coefficient_three = c_approximation(number_opinion)
+    length_three = np.size(coefficient_three, 0)
+    initial_three = np.zeros((length_three))
+    initial_three[3:5] = np.array([committed_fraction[0], sum(committed_fraction[2:])])
+    initial_three[1] = 1- sum(committed_fraction)
+    result_three = odeint(mf_ode, initial_three, t, args=(length_three, coefficient_three))
 
+    "S2"
+    p_cAtilde = np.sum(committed_fraction[2:])
+    p_cA = committed_fraction[0]
     n_max = int(np.floor(p_cAtilde/p_cA))
-    p_cCtilde = p_cA + p_cA * n_max
-    p_cC = p_cAtilde - p_cA * n_max
-    initial_lower = np.zeros((length_approximation))
-    initial_lower[3:5] = np.array([p_cC, p_cCtilde])
+    p_cCtilde = (p_cA-1e-5) * n_max
+    p_cC = p_cAtilde - p_cCtilde
+    N = 3+ max(n_max, 1)
 
-    plt.plot(t, result[:, 0], '-', alpha=alpha, linewidth=lw, label='A')
-    plt.plot(t, result_approximation[:, 0], '-', alpha=alpha, linewidth=lw, label='approximation')
-    plt.legend()
+    coefficient_four = c_approximation_four(N)
+    length_four = np.size(coefficient_four, 0)
+    initial_four = np.zeros((length_four))
+    initial_four[4:7] = np.array([p_cA, p_cC, p_cCtilde])
+    initial_four[1] = 1- sum(committed_fraction)
+    result_four = odeint(mf_ode, initial_four, t, args=(length_four, coefficient_four))
+
+    plt.plot(t, result_three[:, 0], '-', color='tab:red', alpha=alpha, linewidth=lw, label='S1')
+    plt.plot(t, result_four[:, 0], '-', color='tab:blue', alpha=alpha, linewidth=lw, label='S2')
+    plt.xlabel('$t$', fontsize=fontsize)
+    plt.plot(t, result[:, 0], '-', color='tab:green', alpha=alpha, linewidth=lw, label='original')
+    plt.ylabel('$x_A$', fontsize=fontsize)
+    plt.xticks(fontsize=ticksize)
+    plt.yticks(fontsize=ticksize)
+    plt.subplots_adjust(left=0.18, right=0.98, wspace=0.25, hspace=0.25, bottom=0.15, top=0.98)
+    plt.legend(frameon=False, fontsize = legendsize, markerscale=4.0)
+    plt.locator_params(nbins=6)
     plt.show()
     return None
 
@@ -1164,8 +1180,85 @@ def original_random(number_opinion, p, num_iter, seed =0):
     parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
     return None 
 
+def original_gamma_random(number_opinion, gamma, num_iter, seed =0):
+    """TODO: Docstring for original_lowerbound.
 
+    :number_opinion: TODO
+    :returns: TODO
 
+    """
+    np.random.seed(seed)
+    des = f'../data/num_opinion={number_opinion}_original/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    #des_file = des + f'p={p}.csv'
+    des_file = des + f'gamma={gamma}_random.csv'
+    committed_fraction_list = []
+    single_fraction_list = []
+    p_cA_list = np.arange(1e-3, 0.1, 0.001)
+    for p_cA in p_cA_list:
+        p_cAtilde = (number_opinion - 2) * p_cA * gamma
+        for i in range(num_iter):
+            p_list = np.random.random(number_opinion - 2) * p_cA 
+            p_list = p_list/sum(p_list) * p_cAtilde
+            while max(p_list) >= p_cA:
+                diff = p_list - p
+                p_list = p + diff *0.8
+            committed_fraction = np.hstack([p_cA, 0, p_list])
+            single_fraction = np.hstack([0, 1-sum(committed_fraction), np.zeros((number_opinion-2))])
+            committed_fraction_list.append(committed_fraction)
+            single_fraction_list.append(single_fraction)
+    parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
+    return None 
+
+def approximation_gamma_three(number_opinion, gamma_list):
+    """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
+
+    :number_opinion: TODO
+    :: TODO
+    :returns: TODO
+
+    """
+    des = f'../data/num_opinion={number_opinion}_oneuncommitted_approximation_three/'
+    for gamma in gamma_list:
+        committed_fraction_list = []
+        if not os.path.exists(des):
+            os.makedirs(des)
+        des_file = des+ f'gamma={gamma}.csv'
+        p_A_list = np.arange(1e-3, 0.1, 0.001)
+        for p_A in p_A_list:
+            p = p_A * gamma
+            committed_fraction_list.append([p_A, (number_opinion-2) * p])
+        parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file)
+    return None
+
+def approximation_gamma_four(number_opinion, gamma_list):
+    """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
+
+    :number_opinion: TODO
+    :: TODO
+    :returns: TODO
+
+    """
+    des = f'../data/num_opinion={number_opinion}_oneuncommitted_approximation_four/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    for gamma in gamma_list:
+        committed_fraction_list = []
+        number_opinion_list = []
+        p_A_list = np.round(np.arange(2e-3, 0.1, 0.001), 10)
+        des_file = des + f'gamma={gamma}.csv'
+        for p_A in p_A_list:
+            p_cAtilde = (number_opinion - 2) * p_A * gamma
+            p1 = p_A - 1e-3
+            n1 = int(np.floor(p_cAtilde/p1))
+            p_cCtilde = p1 * n1
+            p_cC = p_cAtilde - p_cCtilde
+            committed_fraction = np.array([p_A, p_cC, p_cCtilde])
+            committed_fraction_list.append(committed_fraction)
+            number_opinion_list.append(max(n1, 1) + 3)
+        parallel_attractors_approximation_four(number_opinion_list, committed_fraction_list, des_file)
+    return None
 
 number_opinion = 5
 digit = 4
@@ -1247,11 +1340,11 @@ for number_opinion in [5]:
         #five_lowerbound(number_opinion, p)
         pass
 
-committed_fraction = np.array([0.08, 0, 0.01, 0.07])
-#compare_original_reduced(N, committed_fraction)
-number_opinion = 6
+committed_fraction = np.array([0.075, 0, 0.02, 0.04, 0.06])
+#compare_original_reduced(5, committed_fraction)
+number_opinion = 7
 p_list = np.round(np.arange(0.01, 0.1, 0.01), 3)
-
+p_list = [0.05]
 #approximation_oneuncommitted_four(number_opinion, p_list)
 #approximation_oneuncommitted_three(number_opinion, p_list)
 
@@ -1260,4 +1353,11 @@ p_list = np.round(np.arange(0.01, 0.1, 0.01), 3)
 number_opinion = 6
 p = 0.04
 num_iter = 1
-original_random(number_opinion, p, num_iter, seed =0)
+#original_random(number_opinion, p, num_iter, seed =0)
+gamma_list = np.round(np.arange(0.1, 1, 0.1), 3)
+#approximation_gamma_three(number_opinion, gamma_list)
+#approximation_gamma_four(number_opinion, gamma_list)
+
+for number_opinion in number_opinion_list:
+    for gamma in gamma_list:
+        original_gamma_random(number_opinion, gamma, num_iter, seed =0)
