@@ -10,7 +10,7 @@ import pandas as pd
 import multiprocessing as mp
 from itertools import combinations
 
-cpu_number = 40
+cpu_number = 1
 fontsize = 22
 ticksize= 15
 legendsize = 16
@@ -1197,7 +1197,8 @@ def original_gamma_random(number_opinion, gamma, num_iter, seed =0):
     single_fraction_list = []
     p_cA_list = np.arange(1e-3, 0.1, 0.001)
     for p_cA in p_cA_list:
-        p_cAtilde = (number_opinion - 2) * p_cA * gamma
+        p = p_cA * gamma
+        p_cAtilde = (number_opinion - 2) * p
         for i in range(num_iter):
             p_list = np.random.random(number_opinion - 2) * p_cA 
             p_list = p_list/sum(p_list) * p_cAtilde
@@ -1259,6 +1260,92 @@ def approximation_gamma_four(number_opinion, gamma_list):
             number_opinion_list.append(max(n1, 1) + 3)
         parallel_attractors_approximation_four(number_opinion_list, committed_fraction_list, des_file)
     return None
+
+def approximation_Nchange_three(pA, pAtilde):
+    """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
+
+    :number_opinion: TODO
+    :: TODO
+    :returns: TODO
+
+    """
+    des = f'../data/Nchange_oneuncommitted_approximation_three/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    number_opinion_list = np.arange(3, 10, 1)
+    for number_opinion in number_opinion_list:
+        committed_fraction_list = []
+        des_file = des+ f'pA={pA}_pAtilde={pAtilde}.csv'
+        committed_fraction_list.append([pA, pAtilde])
+        parallel_attractors_approximation(number_opinion, committed_fraction_list, des_file)
+    return None
+
+def approximation_Nchange_four(pA, pAtilde):
+    """reduce some variables, for three-opinion variant, there are 6 variables: A, A', pA, AA', A'A', AA'A' 
+
+    :number_opinion: TODO
+    :: TODO
+    :returns: TODO
+
+    """
+    des = f'../data/Nchange_oneuncommitted_approximation_four/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    number_opinion_list = np.arange(3, 10, 1)
+    for number_opinion in number_opinion_list:
+        committed_fraction_list = []
+        N_list = []
+        des_file = des+ f'pA={pA}_pAtilde={pAtilde}.csv'
+        p1 = pA 
+        n2 = int(np.ceil(pAtilde/p1))
+        if n2 + 2 > number_opinion:
+            committed_fraction = np.array([pA, 0, pAtilde])
+            committed_fraction_list.append(committed_fraction)
+            parallel_attractors_approximation_four([4], committed_fraction_list, des_file)
+
+        else:
+            n1 = int(np.floor(pAtilde/p1))
+            pCtilde = p1 * n1
+            pC = pAtilde - pCtilde
+            committed_fraction = np.array([pA, pC, pCtilde])
+            committed_fraction_list.append(committed_fraction)
+            N_list.append(max(n1, 1) + 3)
+            parallel_attractors_approximation_four(N_list, committed_fraction_list, des_file)
+    return None
+
+def original_Nchange_random(pA, pAtilde, num_iter, seed =0):
+    """TODO: Docstring for original_lowerbound.
+
+    :number_opinion: TODO
+    :returns: TODO
+
+    """
+    np.random.seed(seed)
+    N_list = np.arange(3, 10, 1)
+    p0 = pAtilde/(N_list - 2)
+    index = np.where(pA > p0)[0]
+    number_opinion_list = N_list[index]
+    for number_opinion in number_opinion_list:
+        p = pAtilde/(number_opinion - 2)
+        des = f'../data/Nchange_original/num_opinion={number_opinion}/'
+        if not os.path.exists(des):
+            os.makedirs(des)
+        #des_file = des + f'p={p}.csv'
+        des_file = des + f'pA={pA}_pAtilde={pAtilde}_random.csv'
+        committed_fraction_list = []
+        single_fraction_list = []
+        for i in range(num_iter):
+            p_list = np.random.random(number_opinion - 2) * pA 
+            p_list = p_list/sum(p_list) * pAtilde
+            while max(p_list) >= pA:
+                diff = p_list - p
+                p_list = p + diff *0.8
+            committed_fraction = np.hstack([pA, 0, p_list])
+            single_fraction = np.hstack([0, 1-sum(committed_fraction), np.zeros((number_opinion-2))])
+            committed_fraction_list.append(committed_fraction)
+            single_fraction_list.append(single_fraction)
+        parallel_attractors(number_opinion, committed_fraction_list, single_fraction_list, des_file)
+    return None 
 
 number_opinion = 5
 digit = 4
@@ -1350,14 +1437,28 @@ p_list = [0.05]
 
 #five_original(0.05)
 #six_original(0.05)
-number_opinion = 6
+number_opinion = 7
 p = 0.04
-num_iter = 1
+num_iter = 10
 #original_random(number_opinion, p, num_iter, seed =0)
 gamma_list = np.round(np.arange(0.1, 1, 0.1), 3)
+gamma_list = [0.7, 0.8, 0.9]
 #approximation_gamma_three(number_opinion, gamma_list)
 #approximation_gamma_four(number_opinion, gamma_list)
 
+number_opinion_list = [5]
 for number_opinion in number_opinion_list:
     for gamma in gamma_list:
-        original_gamma_random(number_opinion, gamma, num_iter, seed =0)
+        print(gamma)
+        #original_gamma_random(number_opinion, gamma, num_iter, seed =0)
+
+pA_list = np.round(np.arange(0.05, 0.17, 0.01) + 1e-10, 11)
+pAtilde_list = np.round(np.arange(0.01, 0.2, 0.01), 3)
+for pA in pA_list:
+    for pAtilde in pAtilde_list:
+        #approximation_Nchange_three(pA, pAtilde)
+        approximation_Nchange_four(pA, pAtilde)
+        pass
+pA = 0.1 + 1e-10
+pAtilde = 0.1
+#original_Nchange_random(pA, pAtilde, num_iter)
