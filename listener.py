@@ -180,26 +180,7 @@ def parallel_ode(N, committed_list, uncommitted_list, des_file):
     return None
 
 
-def permutation_different_time(a):
-    """TODO: Docstring for sum_permutation_matrix.
 
-    :a: TODO
-    :returns: TODO
-
-    """
-    pairwise_S = lambda x: sum(np.prod(x, 0))
-    height, width = np.shape(a)
-    if height == 1:
-        T = np.sum(a)
-    else:
-        T = permutation_different_time(a[:-1])  * sum(a[-1]) + (-1) ** (height-1) *  pairwise_S(a) * math.factorial(height-1)
-        height_list = np.arange(height-1)
-        for i in range(1, height-1):
-            all_combination = list(combinations(height_list, height-1-i))
-            for comb_i in all_combination:
-                index_S = list(set(height_list) - set(comb_i))
-                T += permutation_different_time(a[list(comb_i)])  * pairwise_S(np.vstack((a[index_S], a[-1]))) * (-1) ** i * math.factorial(i)
-    return T
 
 def mix_different_time(Q, number_opinion, x):
     """TODO: Docstring for function.
@@ -277,7 +258,7 @@ def recursive_different_time(number_opinion, p, x, t, des_file):
     df_data.to_csv(des_file, index=None, header=None, mode='a')
     return x_evolution, mix_evolution
 
-def recursive_different_time_repeat(number_opinion, x_history, Q_history, mix_sum, t):
+def recursive_different_time_repeat(number_opinion, p, x_history, Q_history, mix_sum, t):
     """TODO: Docstring for recursive_same_time.
 
     :number_opinion: TODO
@@ -326,7 +307,7 @@ def recursive_stable(number_opinion, p, x, des_file):
     x_history[-1] = x.copy()
     mix_sum = np.zeros((number_opinion)) 
     while (difference) >= 1e-3:
-        x_evolution, Q_evolution, mix_sum = recursive_different_time_repeat(number_opinion, x_history, Q_history, mix_sum, t)
+        x_evolution, Q_evolution, mix_sum = recursive_different_time_repeat(number_opinion, p, x_history, Q_history, mix_sum, t)
         x_history = x_evolution[-(number_opinion-1):]
         Q_history = Q_evolution[-(number_opinion-1):]
         difference = sum(abs(x_evolution[-1] - x_evolution[0]))
@@ -335,7 +316,7 @@ def recursive_stable(number_opinion, p, x, des_file):
     df_data.to_csv(des_file, index=None, header=None, mode='a')
     return x_evolution
 
-def parallel_recursive(N, committed_list, uncommitted_list, des_file):
+def parallel_recursive(number_opinion, committed_list, uncommitted_list, des_file):
     """TODO: Docstring for parallel_attractors.
 
     :number_opinion: TODO
@@ -344,7 +325,7 @@ def parallel_recursive(N, committed_list, uncommitted_list, des_file):
 
     """
     p = mp.Pool(cpu_number)
-    p.starmap_async(recursive_stable, [(N, committed_fraction, uncommitted_fraction, des_file) for committed_fraction, uncommitted_fraction in zip(committed_list, uncommitted_list)]).get()
+    p.starmap_async(recursive_stable, [(number_opinion, committed_fraction, uncommitted_fraction, des_file) for committed_fraction, uncommitted_fraction in zip(committed_list, uncommitted_list)]).get()
     p.close()
     p.join()
     return None
@@ -377,6 +358,134 @@ def pA_critical_N(pA_list, N_list, pAtilde, ode):
             parallel_recursive(N, p_list, x_list, des_file)
     return None
 
+def pA_critical_N_fluctuation(pA_list, N_list, pAtilde, max_fluctuation, seed_list, ode):
+    """TODO: Docstring for pA_critical_N.
+    :returns: TODO
+
+    """
+    if ode:
+        des = f'../data/listener_only/ode/pA_critical_N_fluctuation/'
+    else:
+        des = f'../data/listener_only/recursive/pA_critical_N_fluctuation/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    for N in N_list:
+        p0 = pAtilde / (N -2) 
+        for seed in seed_list:
+            des_file = des + f'pAtilde={pAtilde}_N={N}_maxfluc={max_fluctuation}_seed={seed}.csv'
+            p_list = []
+            x_list = []
+            for pA in pA_list:
+                p_fluctuate = np.random.RandomState(seed).uniform(0, max_fluctuation, N-2)
+                pAtilde_fluctuate = pAtilde + p_fluctuate
+                pAtilde_fluctuate = pAtilde_fluctuate / sum(pAtilde_fluctuate) * pAtilde
+                p = np.hstack((pA, 0, pAtilde_fluctuate))
+                x = np.hstack((0, 1-sum(p), np.zeros(N-2)))
+                p_list.append(p)
+                x_list.append(x)
+            if ode:
+                parallel_ode(N, p_list, x_list, des_file)
+            else:
+                parallel_recursive(N, p_list, x_list, des_file)
+    return None
+
+def pA_critical_N_fluctuation_dirichlet(pA_list, N_list, pAtilde, alpha_list, seed_list, ode):
+    """TODO: Docstring for pA_critical_N.
+    :returns: TODO
+
+    """
+    if ode:
+        des = f'../data/listener_only/ode/pA_critical_N_fluctuation_dirichlet/'
+    else:
+        des = f'../data/listener_only/recursive/pA_critical_N_fluctuation_dirichlet/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    for N in N_list:
+        p0 = pAtilde / (N -2) 
+        for seed in seed_list:
+            for alpha in alpha_list:
+                p_list = []
+                x_list = []
+                des_file = des + f'pAtilde={pAtilde}_N={N}_alpha={alpha}_seed={seed}.csv'
+                for pA in pA_list:
+                    p_fluctuate = np.random.RandomState(seed).dirichlet(np.ones(N-2) * alpha)
+                    pAtilde_fluctuate = p_fluctuate * pAtilde
+                    p = np.hstack((pA, 0, pAtilde_fluctuate))
+                    x = np.hstack((0, 1-sum(p), np.zeros(N-2)))
+                    p_list.append(p)
+                    x_list.append(x)
+                if ode:
+                    parallel_ode(N, p_list, x_list, des_file)
+                else:
+                    parallel_recursive(N, p_list, x_list, des_file)
+    return None
+
+
+def attractors_Nchange(N, committed_fraction, uncommitted_fraction, des_file):
+    """TODO: Docstring for attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :single_fraction: TODO
+    :returns: TODO
+
+    """
+    length = 2**N -1 + N
+    c_matrix = change_rule(N)
+    attractor = ode_stable(N, committed_fraction, uncommitted_fraction, c_matrix)
+    data = np.hstack((committed_fraction[:4], attractor[:4]))
+    df_data = pd.DataFrame(data.reshape(1, len(data)))
+    df_data.to_csv(des_file, index=None, header=None, mode='a')
+    return None
+
+def parallel_ode_Nchange(N_list, committed_list, uncommitted_list, des_file):
+    """TODO: Docstring for parallel_attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :returns: TODO
+
+    """
+    p = mp.Pool(cpu_number)
+    p.starmap_async(attractors_Nchange, [(N, committed_fraction, uncommitted_fraction, des_file) for N, committed_fraction, uncommitted_fraction in zip(N_list, committed_list, uncommitted_list)]).get()
+    p.close()
+    p.join()
+    return None
+
+def pA_critical_N_lowerbound(N_list, pAtilde, ode):
+    """TODO: Docstring for pA_critical_N.
+    :returns: TODO
+
+    """
+    if ode:
+        des = f'../data/listener_only/ode/pA_critical_N_lowerbound/'
+    else:
+        des = f'../data/listener_only/recursive/pA_critical_N_lowerbound/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    for N in N_list:
+        des_file = des + f'pAtilde={pAtilde}_N={N}.csv'
+        p0 = pAtilde / (N -2) 
+        pmax_list = np.arange(p0, pAtilde+0.0001, 0.001)
+        number_opinion_list = []
+        p_list = []
+        x_list = []
+        for pmax in pmax_list:
+            n_max = int(np.round(pAtilde/pmax, 13))  # round-off error
+            pA = pmax + 0.001
+            pC = pAtilde - pmax * n_max
+            p = np.hstack((pA, 0, pC, np.ones(n_max) * pmax))
+            number_opinion = n_max + 3
+            x = np.hstack((0, 1-sum(p), 0, np.zeros(n_max)))
+            p_list.append(p)
+            x_list.append(x)
+            number_opinion_list.append(number_opinion)
+        if ode:
+            parallel_ode_Nchange(number_opinion_list, p_list, x_list, des_file)
+        else:
+            parallel_recursive_Nchange(number_opinion_list, p_list, x_list, des_file)
+    return None
+
 
 
 
@@ -392,7 +501,17 @@ pA_list = np.arange(0.001, 0.12, 0.001)
 N_list = np.arange(3, 8, 1)
 pAtilde = 0.1
 ode = 1
-pA_critical_N(pA_list, N_list, pAtilde, ode)
+#pA_critical_N(pA_list, N_list, pAtilde, ode)
+
+max_fluctuation = 0.01
+seed_list = np.arange(100).tolist()
+#pA_critical_N_fluctuation(pA_list, N_list, pAtilde, max_fluctuation, seed_list, ode)
+#pA_critical_N_lowerbound(N_list, pAtilde, ode)
+
+alpha_list = np.array([1])
+seed_list = [0]
+
+pA_critical_N_fluctuation_dirichlet(pA_list, N_list, pAtilde, alpha_list, seed_list, ode)
 
 """
 "mean-field"
