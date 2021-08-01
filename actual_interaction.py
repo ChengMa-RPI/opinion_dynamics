@@ -111,7 +111,7 @@ def actual_simulation(N, interaction_number, data_point, initial_state, state_si
     listener_list = random_state.randint(0, N-1, size=interaction_number)
     listener_speaker_list = np.heaviside(listener_list - speaker_list, 1)
     listener_list = np.array(listener_list + listener_speaker_list, int)
-    select_list = random_state.random(interaction_number)
+    select_list = random_state.random(interaction_number)  # used to select one from more than one outcomes
     for i in range(interaction_number):
         speaker = speaker_list[i]
         listener = listener_list[i]
@@ -144,6 +144,7 @@ def parallel_actual_simulation(number_opinion, N, interaction_number, data_point
     :returns: TODO
 
     """
+    """
     nA = int(N * pA)
     nC = int(N * p)
     nB = int(N - nA - nC * (number_opinion - 2))
@@ -152,7 +153,41 @@ def parallel_actual_simulation(number_opinion, N, interaction_number, data_point
     state_committed = state_list[number_opinion: 2*number_opinion]
     state_Atilde = state_committed[2:] 
     initial_state = ['a'] * nA + ['B'] * nB  + functools.reduce(operator.iconcat, [[i] * nC for i in state_Atilde], [])
+    """
+    nA = int(N * pA)
+    nB = int(N * p)
+    xB = int(N - nA - nB)
+    xA = int(N/2)
+    xB = int(N/2)
+    state_list = all_state(number_opinion)
+    state_single = state_list[0: number_opinion]
+    #initial_state = ['a'] * nA + ['b'] * nB  + ['B'] * xB 
+    initial_state = ['a'] * nA + ['b'] * nB  + ['A'] * xA + ['B'] * xB 
+
     des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_interaction_number={interaction_number}_pA={pA}_p={p}/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+
+    p = mp.Pool(cpu_number)
+    p.starmap_async(actual_simulation, [(N, interaction_number, data_point, initial_state, state_single, seed, des) for seed in seed_list]).get()
+    p.close()
+    p.join()
+    return None
+
+def parallel_onecommitted(number_opinion, N, interaction_number, data_point, seed_list, pA):
+    """TODO: Docstring for parallel_actual_simlation.
+
+    :arg1: TODO
+    :returns: TODO
+
+    """
+    nA = int(N * pA)
+    xB = int(N - nA)
+    state_list = all_state(number_opinion)
+    state_single = state_list[0: number_opinion]
+    initial_state = ['a'] * nA + ['B'] * xB 
+
+    des = f'../data/actual_simulation/onecommitted/number_opinion={number_opinion}/N={N}_interaction_number={interaction_number}_pA={pA}/'
     if not os.path.exists(des):
         os.makedirs(des)
 
@@ -164,17 +199,36 @@ def parallel_actual_simulation(number_opinion, N, interaction_number, data_point
 
 
 
-number_opinion = 12
+number_opinion = 22
 N = 100000
 interaction_number = 100000
 N_list = np.array([1000, 5000, 10000, 50000, 100000])
+N_list = np.array([1000])
 interaction_number_list = N_list* 100
 data_point = 1000
 interval = int(interaction_number/data_point)
 seed_list = np.arange(100)
-pA = 0.1
+pA = 0.2
 p = 0.01
+p_list = [0.02, 0.03, 0.04, 0.05]
 p_list = [0.01, 0.02, 0.03, 0.04, 0.05]
 for N, interaction_number in zip(N_list, interaction_number_list):
     for p in p_list:
-        parallel_actual_simulation(number_opinion, N, interaction_number, data_point, seed_list, pA, p)
+        #parallel_actual_simulation(number_opinion, N, interaction_number, data_point, seed_list, pA, p)
+        pass
+
+number_opinion = 2
+N = 100000
+interaction_number = N * 100
+data_point = 1000
+pA = 0
+p = 0
+#parallel_actual_simulation(number_opinion, N, interaction_number, data_point, seed_list, pA, p)
+
+number_opinion = 2
+N = 500000
+interaction_number = N * 100
+data_point = 1000
+pA = 0.3
+p = 0
+parallel_onecommitted(number_opinion, N, interaction_number, data_point, seed_list, pA)
