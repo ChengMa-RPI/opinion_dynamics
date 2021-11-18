@@ -18,7 +18,7 @@ from collections import Counter
 from function_simulation_ode_mft import transition_rule, all_state, change_rule, actual_simulation, mf_ode
 
 
-cpu_number = 1
+cpu_number = 4
 fontsize = 22
 ticksize= 15
 legendsize = 16
@@ -126,18 +126,21 @@ def parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction
     if switch_direction == 'A-B':
         switch_threshold = xB_B_dominate 
         xA_simulation = xA_A_dominate
+        xB_simulation = xB_A_dominate
     elif switch_direction == 'B-A':
         switch_threshold = xA_A_dominate
         xA_simulation = xA_B_dominate
-    nA_com = int(N * pA)
-    nB_com = int(N * pB)
-    nA_uncom = int(N * xA_simulation)
-    nB_uncom = int(N - nA_com - nB_com - nA_uncom) 
+        xB_simulation = xB_B_dominate
+    nA_com = round(N * pA)
+    nB_com = round(N * pB)
+    nA_uncom = round(N * xA_simulation)
+    nB_uncom = round(N * xB_simulation) 
+    nAB_uncom = N - nA_com - nB_com - nA_uncom - nB_uncom
     state_list = all_state(number_opinion)
     state_single = state_list[0: number_opinion]
-    initial_state = ['a'] * nA_com + ['b'] * nB_com  + ['A'] * nA_uncom + ['B'] * nB_uncom
+    initial_state = ['a'] * nA_com + ['b'] * nB_com  + ['A'] * nA_uncom + ['B'] * nB_uncom + ['AB'] * nAB_uncom
 
-    des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_interaction_number={interaction_number}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
+    des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
     if not os.path.exists(des):
         os.makedirs(des)
     p = mp.Pool(cpu_number)
@@ -165,9 +168,14 @@ def simulation_onetime(N, interaction_number, data_point, initial_state, state_s
     state = initial_state.copy()
     random_state = np.random.RandomState(seed)
     speaker_list = random_state.choice(N, size=interaction_number, replace=True)
-    listener_list = random_state.randint(0, N-1, size=interaction_number)
-    listener_speaker_list = np.heaviside(listener_list - speaker_list, 1)
-    listener_list = np.array(listener_list + listener_speaker_list, int)
+    #listener_list = random_state.randint(0, N-1, size=interaction_number)
+    #listener_speaker_list = np.heaviside(listener_list - speaker_list, 1)
+    #listener_list = np.array(listener_list + listener_speaker_list, int)
+    listener_list = random_state.randint(0, N, size=interaction_number)
+    listener_speaker_index = np.where((listener_list - speaker_list) == 0)[0]
+    listener_speaker_list = np.random.RandomState(seed+100).randint(1, N, size = len(listener_speaker_index)) 
+    listener_list[listener_speaker_index] = (listener_list[listener_speaker_index] + listener_speaker_list) % N
+
     select_list = random_state.random(interaction_number)  # used to select one from more than one outcomes
     for i in range(interaction_number):
         speaker = speaker_list[i]
@@ -257,7 +265,7 @@ p = 0
 ng_type = 'original'
 number_opinion = 2
 data_point = 10000
-pA = 0.05
+pA = 0.07
 pB = 0
 committed_fraction = np.array([pA, pB])
 single_fraction = np.array([1-sum(committed_fraction), 0])
@@ -276,8 +284,9 @@ for filename in os.listdir(des):
     seed_seen.append(int(filename[filename.find('=')+1:filename.find('.')]))
 seed_list = np.setdiff1d(seed_list, seed_seen)
 """
-N_list = [60, 80, 100, 120, 140]
+N_list = [100]
 for N in N_list:
     interaction_number = N * 500000
     data_point = 50000
     parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction)
+    pass
