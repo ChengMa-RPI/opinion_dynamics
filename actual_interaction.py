@@ -109,7 +109,7 @@ def parallel_actual_simulation(number_opinion, N, interaction_number, data_point
     p.join()
     return None
 
-def parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction):
+def parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer):
     """TODO: Docstring for parallel_actual_simlation.
 
     :arg1: TODO
@@ -131,16 +131,28 @@ def parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction
         switch_threshold = xA_A_dominate
         xA_simulation = xA_B_dominate
         xB_simulation = xB_B_dominate
-    nA_com = round(N * pA)
-    nB_com = round(N * pB)
-    nA_uncom = round(N * xA_simulation)
-    nB_uncom = round(N * xB_simulation) 
+    if approx_integer == 'round':
+        nA_com = int(round(N * pA))
+        nB_com = int(round(N * pB))
+        nA_uncom = int(round(N * xA_simulation))
+        nB_uncom = int(round(N * xB_simulation))
+    elif approx_integer == 'floor':
+        nA_com = int(N * pA)
+        nB_com = int(N * pB)
+        nA_uncom = int(N * xA_simulation)
+        nB_uncom = int(N * xB_simulation) 
+    elif approx_integer == 'ceil':
+        nA_com = int(np.ceil(N * pA))
+        nB_com = int(np.ceil(N * pB))
+        nA_uncom = int(np.ceil(N * xA_simulation))
+        nB_uncom = int(np.ceil(N * xB_simulation))
+
     nAB_uncom = N - nA_com - nB_com - nA_uncom - nB_uncom
     state_list = all_state(number_opinion)
     state_single = state_list[0: number_opinion]
     initial_state = ['a'] * nA_com + ['b'] * nB_com  + ['A'] * nA_uncom + ['B'] * nB_uncom + ['AB'] * nAB_uncom
 
-    des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
+    des = f'../data/actual_simulation/number_opinion={number_opinion}/approx_integer=' + approx_integer + f'/N={N}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
     if not os.path.exists(des):
         os.makedirs(des)
     p = mp.Pool(cpu_number)
@@ -278,15 +290,16 @@ switch_direction = 'B-A'
 seed_list = np.arange(100) 
 N = 140
 interaction_number = N * 100000
-des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_interaction_number={interaction_number}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
+des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
 seed_seen = []
 for filename in os.listdir(des):
     seed_seen.append(int(filename[filename.find('=')+1:filename.find('.')]))
 seed_list = np.setdiff1d(seed_list, seed_seen)
 """
-N_list = [100]
+approx_integer = 'floor'
+N_list = [60]
 for N in N_list:
     interaction_number = N * 500000
     data_point = 50000
-    parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction)
+    parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
     pass
