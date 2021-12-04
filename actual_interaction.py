@@ -131,21 +131,27 @@ def parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction
         switch_threshold = xA_A_dominate
         xA_simulation = xA_B_dominate
         xB_simulation = xB_B_dominate
+
+    nA_com = round(N * pA, 10)
+    nB_com = round(N * pB, 10)
+    nA_uncom = round(N * xA_simulation, 10)
+    nB_uncom = round(N * xB_simulation, 10)
+
     if approx_integer == 'round':
-        nA_com = int(round(N * pA))
-        nB_com = int(round(N * pB))
-        nA_uncom = int(round(N * xA_simulation))
-        nB_uncom = int(round(N * xB_simulation))
+        nA_com = int(round(nA_com))
+        nB_com = int(round(nB_com))
+        nA_uncom = int(round(nA_uncom))
+        nB_uncom = int(round(nB_uncom))
     elif approx_integer == 'floor':
-        nA_com = int(N * pA)
-        nB_com = int(N * pB)
-        nA_uncom = int(N * xA_simulation)
-        nB_uncom = int(N * xB_simulation) 
+        nA_com = int(nA_com)
+        nB_com = int(nB_com)
+        nA_uncom = int(nA_uncom)
+        nB_uncom = int(nB_uncom) 
     elif approx_integer == 'ceil':
-        nA_com = int(np.ceil(N * pA))
-        nB_com = int(np.ceil(N * pB))
-        nA_uncom = int(np.ceil(N * xA_simulation))
-        nB_uncom = int(np.ceil(N * xB_simulation))
+        nA_com = int(np.ceil(nA_com))
+        nB_com = int(np.ceil(nB_com))
+        nA_uncom = int(np.ceil(nA_uncom))
+        nB_uncom = int(np.ceil(nB_uncom))
 
     nAB_uncom = N - nA_com - nB_com - nA_uncom - nB_uncom
     state_list = all_state(number_opinion)
@@ -222,6 +228,60 @@ def simulation_onetime(N, interaction_number, data_point, initial_state, state_s
     df_data.to_csv(des_file, index=None, header=None)
     return None
 
+def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, p0, switch_direction, approx_integer):
+    """TODO: Docstring for parallel_actual_simlation.
+
+    :arg1: TODO
+    :returns: TODO
+
+    """
+    committed_fraction = np.hstack(( np.array([pA, 0]), np.ones(number_opinion - 2) * p0 ))
+    xA_dominate = np.hstack(( np.array([1-sum(committed_fraction)]), np.zeros(number_opinion - 1) )) 
+    xB_dominate = np.hstack(( np.array([0, 1-sum(committed_fraction)]), np.zeros(number_opinion - 2) )) 
+    xC_dominate = np.hstack(( np.array([0, 0, 1-sum(committed_fraction)]), np.zeros(number_opinion - 3) )) 
+    result_A_dominate = mft_evolution(number_opinion, committed_fraction, xA_dominate)[-1]
+    result_B_dominate = mft_evolution(number_opinion, committed_fraction, xB_dominate)[-1]
+    result_C_dominate = mft_evolution(number_opinion, committed_fraction, xC_dominate)[-1]
+    if switch_direction == 'A-B':
+        switch_threshold = result_B_dominate[1]
+        x_simulation = result_A_dominate 
+    elif switch_direction == 'B-A':
+        switch_threshold = result_A_dominate[0]
+        x_simulation = result_B_dominate 
+    elif switch_direction == 'B-C':
+        switch_threshold = result_C_dominate[2]
+        x_simulation = result_B_dominate 
+
+    n_all_opinions = np.round(x_simulation * N, 10) 
+    if approx_integer == 'round':
+        n_all_integer = np.array( np.round(n_all_opinions), dtype=int)
+    elif approx_integer == 'floor':
+        n_all_integer = np.array(n_all_opinions, dtype=int)
+    elif approx_integer == 'ceil':
+        n_all_integer = np.array(np.ceil(n_all_opinions), dtype=int)
+
+    if sum(n_all_integer[:-1]) <= N :
+        n_all_integer[-1] = N - sum(n_all_integer[:-1])
+    else:
+        index = np.where(np.cumsum(n_all_integer) > N )[0]
+        n_all_integer[index]  = N - sum(n_all_integer[:index-1]) 
+        n_all_integer[index+1:] = 0
+
+    state_list = all_state(number_opinion)
+    initial_state = []
+    for i, j in zip(state_list, n_all_integer):
+        initial_state += [i] * j
+
+    state_single = state_list[0: number_opinion]
+    des = f'../data/actual_simulation/number_opinion={number_opinion}/approx_integer=' + approx_integer + f'/N={N}_pA={pA}_p0={p0}_switch_direction=' + switch_direction + '/'
+    if not os.path.exists(des):
+        os.makedirs(des)
+    p = mp.Pool(cpu_number)
+    p.starmap_async(simulation_onetime, [(N, interaction_number, data_point, initial_state, state_single, seed, des, switch_direction, switch_threshold) for seed in seed_list]).get()
+    p.close()
+    p.join()
+    return None
+
 
 def parallel_onecommitted(number_opinion, N, interaction_number, data_point, seed_list, pA):
     """TODO: Docstring for parallel_actual_simlation.
@@ -276,14 +336,6 @@ p = 0
 
 ng_type = 'original'
 number_opinion = 2
-data_point = 10000
-pA = 0.07
-pB = 0
-committed_fraction = np.array([pA, pB])
-single_fraction = np.array([1-sum(committed_fraction), 0])
-result = mft_evolution(number_opinion, committed_fraction, single_fraction)
-xA = round(result[-1, 0], 3)
-#parallel_actual_simulation_two_opinion(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, xA)
 switch_direction = 'B-A'
 
 """
@@ -297,9 +349,20 @@ for filename in os.listdir(des):
 seed_list = np.setdiff1d(seed_list, seed_seen)
 """
 approx_integer = 'floor'
-N_list = [60]
+N_list = [50, 75, 125, 150, 175]
 for N in N_list:
     interaction_number = N * 500000
     data_point = 50000
-    parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
+    #parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
     pass
+
+
+pA = 0.08
+p0 = 0.04
+number_opinion = 4
+switch_direction = 'B-A'
+approx_integer = 'round'
+
+N_list = [400]
+for N in N_list:
+    parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, p0, switch_direction, approx_integer)
