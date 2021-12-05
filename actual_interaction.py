@@ -27,6 +27,168 @@ lw = 3
 
 mpl.rcParams['axes.prop_cycle'] = (cycler(color=['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3']) )
 
+def all_state_approximation_three(number_opinion):
+    """TODO: Docstring for reduce_state.
+
+    :number_opinion: TODO
+    :returns: TODO
+
+    """
+    state = []
+    for length in range(1, number_opinion+1):
+        if length == 1:
+            state.extend(['A', 'B', 'C', 'a', 'c'])
+        elif length >1 and length <number_opinion-1:
+            state.extend([i+ 'C' * (length-2) for i in ['AB', 'AC', 'BC', 'CC']])
+        elif length == number_opinion-1:
+            state.extend([i+ 'C' * (length-2) for i in ['AB', 'AC', 'BC']])
+        elif length == number_opinion:
+            state.extend(['AB' + 'C' * (length-2)])
+    return state
+
+def transition_rule_approximation_S1(s1, s2, n):
+    """states after interaction (speaker-listenser) 7 states: A, B, C, AB, AC, BC, ABC
+        
+
+    :s1: TODO
+    :s2: TODO
+    :returns: TODO
+
+    """
+    n1 = s1.count('C')
+    n2 = s2.count('C')
+
+    result = []
+    if s1.islower() and s2.islower():
+        sf1 = s1
+        sf2 = s2
+        result.append([(sf1, sf2, 1)])
+    elif s1.islower() and s2.isupper():
+        sf1 = s1
+        v = s1.upper()
+        if v == 'A':
+            if v in s2:
+                sf2 = v
+            else:
+                sf2 = v + s2
+                sf2 = ''.join(sorted(sf2))
+            result.append([(sf1, sf2, 1)])
+        elif v == 'C':
+            if v in s2:
+                sf2_1 = v
+                p_1 = n2/n
+                sf2 = s2 + v
+                sf2_2 = ''.join(sorted(sf2))
+                p_2= 1-n2/n
+                result.append([(sf1, sf2_1, p_1), (sf1, sf2_2, p_2)])
+            else:
+                sf2 = v + s2
+                sf2 = ''.join(sorted(sf2))
+                result.append([(sf1, sf2, 1)])
+                
+    elif s1.isupper() and s2.islower():
+        sf2 = s2
+        u = s2.upper()
+        if u == 'A':
+            for v in s1:
+                if v != u:
+                    sf1 = s1
+                else:
+                    sf1 = v
+                result.append([(sf1, sf2, 1)])
+        elif u == 'C':
+            for v in s1:
+                if v != u:
+                    sf1 = s1
+                    result.append([(sf1, sf2, 1)])
+                else:
+                    sf1_1 = v
+                    p_1 = 1/n
+                    sf1_2 = s1
+                    p_2= 1-1/n
+                    result.append([(sf1_1, sf2, p_1), (sf1_2, sf2, p_2)])
+
+    else:
+        for v in s1:
+            if v == 'A' or v == 'B':
+                if v in s2:
+                    sf1 = v
+                    sf2 = v
+                else:
+                    sf1 = s1
+                    sf2 = v + s2
+                    sf2 = ''.join(sorted(sf2))
+                result.append([(sf1, sf2, 1)])
+            elif v == 'C':
+                if v in s2:
+                    sf1_1 = v
+                    sf2_1 = v
+                    p_1 = n2/n
+                    sf1_2 = s1
+                    sf2_2 = v + s2
+                    sf2_2 = ''.join(sorted(sf2_2))
+                    p_2 = 1-n2/n
+                    result.append([(sf1_1, sf2_1, p_1), (sf1_2, sf2_2, p_2)])
+                else:
+                    sf1 = s1
+                    sf2 = v + s2
+                    sf2 = ''.join(sorted(sf2))
+                    result.append([(sf1, sf2, 1)])
+    return result
+
+def change_rule_approximation_S1(number_opinion):
+    """TODO: Docstring for change_rule.
+
+    :number_opinion: TODO
+    :returns: TODO
+
+    """
+    possible_state = all_state_approximation_three(number_opinion)
+    length = len(possible_state)
+    transition_before_list = []
+    transition_after_list = []
+    for s1 in possible_state:
+        for s2 in possible_state:
+            transition_before_list.append([s1, s2])
+            transition_after_list.append(transition_rule_approximation_S1(s1, s2, number_opinion-2))
+    interaction_num = len(transition_after_list)
+    change_matrix = np.zeros((interaction_num, length))
+    for i in range(interaction_num):
+        transition_after = transition_after_list[i]
+        transition_before = transition_before_list[i]
+        len_result = len(transition_after)
+        for x in transition_before:
+            index = possible_state.index(x)
+            change_matrix[i, index] -= 1
+            
+        for one_result in transition_after:
+            for xp in one_result:
+                p = xp[-1]
+                if p > 0:
+                    for x in xp[:2]:
+                        index = possible_state.index(x)
+                        change_matrix[i, index] += 1/len_result * p
+    c_matrix = np.round(change_matrix.reshape(length, length, length).transpose(2, 0, 1), 16)
+    return c_matrix
+
+def mft_evolution_approximation(number_opinion, committed_fraction, single_fraction):
+    """TODO: Docstring for attractors.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :single_fraction: TODO
+    :returns: TODO
+
+    """
+    length = 4 * number_opinion - 3
+    c_matrix = change_rule_approximation_S1(number_opinion)
+    mixed_fraction = np.zeros((length-5))
+    initial_state = np.hstack(([single_fraction, committed_fraction, mixed_fraction]))
+    t = np.arange(0, 1000, 0.01)
+    result = odeint(mf_ode, initial_state, t, args=(length, c_matrix))
+    return result
+
+
 
 def mft_evolution(number_opinion, committed_fraction, single_fraction):
     """TODO: Docstring for attractors.
@@ -235,6 +397,7 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
     :returns: TODO
 
     """
+    """
     committed_fraction = np.hstack(( np.array([pA, 0]), np.ones(number_opinion - 2) * p0 ))
     xA_dominate = np.hstack(( np.array([1-sum(committed_fraction)]), np.zeros(number_opinion - 1) )) 
     xB_dominate = np.hstack(( np.array([0, 1-sum(committed_fraction)]), np.zeros(number_opinion - 2) )) 
@@ -242,6 +405,14 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
     result_A_dominate = mft_evolution(number_opinion, committed_fraction, xA_dominate)[-1]
     result_B_dominate = mft_evolution(number_opinion, committed_fraction, xB_dominate)[-1]
     result_C_dominate = mft_evolution(number_opinion, committed_fraction, xC_dominate)[-1]
+    """
+    committed_fraction = np.array([pA, p0*(number_opinion - 2)])
+    xA_dominate = np.array([1-sum(committed_fraction), 0, 0])
+    xB_dominate = np.array([0, 1-sum(committed_fraction), 0])
+    xC_dominate = np.array([0, 0, 1-sum(committed_fraction)])
+    result_A_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xA_dominate)[-1]
+    result_B_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xB_dominate)[-1]
+    result_C_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xC_dominate)[-1]
     if switch_direction == 'A-B':
         switch_threshold = result_B_dominate[1]
         x_simulation = result_A_dominate 
@@ -267,7 +438,9 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
         n_all_integer[index]  = N - sum(n_all_integer[:index-1]) 
         n_all_integer[index+1:] = 0
 
-    state_list = all_state(number_opinion)
+    #state_list = all_state(number_opinion)
+
+    state_list = all_state_approximation_three(number_opinion)
     initial_state = []
     for i, j in zip(state_list, n_all_integer):
         initial_state += [i] * j
@@ -358,11 +531,12 @@ for N in N_list:
 
 
 pA = 0.08
-p0 = 0.04
-number_opinion = 4
+p0 = 0.01
+number_opinion = 10
 switch_direction = 'B-A'
-approx_integer = 'round'
+approx_integer = 'floor'
 
-N_list = [400]
+N_list = [100, 200, 300]
 for N in N_list:
     parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, p0, switch_direction, approx_integer)
+    pass
