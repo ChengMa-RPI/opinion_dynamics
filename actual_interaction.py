@@ -188,6 +188,44 @@ def mft_evolution_approximation(number_opinion, committed_fraction, single_fract
     result = odeint(mf_ode, initial_state, t, args=(length, c_matrix))
     return result
 
+def approximation_to_original(number_opinion, x):
+    """TODO: Docstring for function.
+
+    :number_opinion: TODO
+    :x: TODO
+    :returns: TODO
+
+    """
+    y = np.zeros(2 ** number_opinion - 1 + number_opinion)
+    state_list = all_state(number_opinion)
+    state_list_approximation = all_state_approximation_three(number_opinion)
+    state_convert_index = []
+    convert = []
+    for i in state_list:
+        new = ''
+        for j in i:
+            if j == 'A' or j == 'B' or j == 'a' or j == 'b':
+                new += j
+            elif j.islower():
+                new += 'c'
+            else:
+                new += 'C'
+        convert.append(new)
+        if new == 'b':
+            state_convert_index.append(-1)
+        else:
+            state_convert_index.append(state_list_approximation.index(new))
+    for i in range(np.size(y)):
+        if state_convert_index[i] == -1:
+            y[i] = 0
+        else:
+            y[i] = x[state_convert_index[i]] / np.sum(state_convert_index[i] == np.array(state_convert_index))
+    return y
+
+
+
+
+
 
 
 def mft_evolution(number_opinion, committed_fraction, single_fraction):
@@ -422,6 +460,7 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
     elif switch_direction == 'B-C':
         switch_threshold = result_C_dominate[2]
         x_simulation = result_B_dominate 
+    x_simulation = approximation_to_original(number_opinion, x_simulation)
 
     n_all_opinions = np.round(x_simulation * N, 10) 
     if approx_integer == 'round':
@@ -438,12 +477,11 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
         n_all_integer[index]  = N - sum(n_all_integer[:index-1]) 
         n_all_integer[index+1:] = 0
 
-    #state_list = all_state(number_opinion)
 
-    state_list = all_state_approximation_three(number_opinion)
+    state_list = all_state(number_opinion)
     initial_state = []
     for i, j in zip(state_list, n_all_integer):
-        initial_state += [i] * j
+            initial_state += [i] * j
 
     state_single = state_list[0: number_opinion]
     des = f'../data/actual_simulation/number_opinion={number_opinion}/approx_integer=' + approx_integer + f'/N={N}_pA={pA}_p0={p0}_switch_direction=' + switch_direction + '/'
