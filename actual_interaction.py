@@ -323,6 +323,11 @@ def parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction
     result_B_dominate = mft_evolution(number_opinion, committed_fraction, xB_dominate)
     xA_A_dominate, xB_A_dominate = result_A_dominate[-1, :2]
     xA_B_dominate, xB_B_dominate = result_B_dominate[-1, :2]
+    if abs(xA_A_dominate - xA_B_dominate) < 1e-5:
+        xA_B_dominate = 0
+        xB_B_dominate = 1 - sum(committed_fraction)
+
+
     if switch_direction == 'A-B':
         switch_threshold = xB_B_dominate 
         xA_simulation = xA_A_dominate
@@ -415,11 +420,11 @@ def simulation_onetime(N, interaction_number, data_point, initial_state, state_s
             #print(seed, j)
             for single, state_index in zip(state_single, range(len(state_single))):
                 state_single_evolution[j, state_index] = state_counter[single]
-            if switch_direction == 'A-B' and state_counter['B'] > 0.95 * switch_threshold * N and index_switch == 0:
+            if switch_direction == 'A-B' and state_counter['B'] >= 0.99 * switch_threshold * N and index_switch == 0:
                 index_switch = j
-            elif switch_direction == 'B-A' and state_counter['A'] > 0.95 * switch_threshold * N and index_switch == 0:
+            elif switch_direction == 'B-A' and state_counter['A'] >= 0.99 * switch_threshold * N and index_switch == 0:
                 index_switch = j
-            if index_switch and j -index_switch > 10: 
+            if index_switch and j -index_switch > 20: 
                 index_stop = j
                 break
 
@@ -451,6 +456,8 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
     result_A_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xA_dominate)[-1]
     result_B_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xB_dominate)[-1]
     result_C_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xC_dominate)[-1]
+    if np.sum(np.abs(result_A_dominate - result_B_dominate)) < 1e-5:
+        result_B_dominate = np.hstack((np.array([0, 1-sum(committed_fraction)]), np.zeros(len(result_B_dominate) - 2) ))
     if switch_direction == 'A-B':
         switch_threshold = result_B_dominate[1]
         x_simulation = result_A_dominate 
@@ -541,34 +548,35 @@ number_opinion = 2
 N = 140
 interaction_number = N * 10000
 data_point = 1000
-pA = 0
-p = 0
+pA = 0.3
+pB = 0
 #parallel_actual_simulation(number_opinion, N, interaction_number, data_point, seed_list, pA, p)
 
 ng_type = 'original'
 number_opinion = 2
 switch_direction = 'B-A'
+approx_integer = 'floor'
 
-"""
 seed_list = np.arange(100) 
-N = 140
+"""
+N = 300
 interaction_number = N * 100000
-des = f'../data/actual_simulation/number_opinion={number_opinion}/N={N}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
+des = f'../data/actual_simulation/number_opinion={number_opinion}/approx_integer=' + approx_integer + f'/N={N}_pA={pA}_pB={pB}_switch_direction=' + switch_direction + '/'
 seed_seen = []
 for filename in os.listdir(des):
     seed_seen.append(int(filename[filename.find('=')+1:filename.find('.')]))
 seed_list = np.setdiff1d(seed_list, seed_seen)
 """
-approx_integer = 'floor'
-N_list = [50, 75, 125, 150, 175]
+
+N_list = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 for N in N_list:
-    interaction_number = N * 500000
-    data_point = 50000
-    #parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
+    interaction_number = N * 100000
+    data_point = 100000
+    parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
     pass
 
 
-pA = 0.08
+pA = 0.12
 p0 = 0.01
 number_opinion = 10
 switch_direction = 'B-A'
@@ -576,5 +584,5 @@ approx_integer = 'floor'
 
 N_list = [100, 200, 300]
 for N in N_list:
-    parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, p0, switch_direction, approx_integer)
+    #parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, p0, switch_direction, approx_integer)
     pass
