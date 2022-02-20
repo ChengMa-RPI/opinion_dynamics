@@ -167,9 +167,13 @@ def actual_simulation(N, interaction_number, data_point, initial_state, state_si
     state = initial_state.copy()
     random_state = np.random.RandomState(seed)
     speaker_list = random_state.choice(N, size=interaction_number, replace=True)
-    listener_list = random_state.randint(0, N-1, size=interaction_number)
-    listener_speaker_list = np.heaviside(listener_list - speaker_list, 1)
-    listener_list = np.array(listener_list + listener_speaker_list, int)
+    #listener_list = random_state.randint(0, N-1, size=interaction_number)
+    #listener_speaker_list = np.heaviside(listener_list - speaker_list, 1)
+    #listener_list = np.array(listener_list + listener_speaker_list, int)
+    listener_list = random_state.randint(0, N, size=interaction_number)
+    listener_speaker_index = np.where((listener_list - speaker_list) == 0)[0]
+    listener_speaker_list = np.random.RandomState(seed+100).randint(1, N, size = len(listener_speaker_index)) 
+    listener_list[listener_speaker_index] = (listener_list[listener_speaker_index] + listener_speaker_list) % N
     select_list = random_state.random(interaction_number)  # used to select one from more than one outcomes
     for i in range(interaction_number):
         speaker = speaker_list[i]
