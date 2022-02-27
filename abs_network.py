@@ -11,6 +11,8 @@ from collections import Counter
 import functools
 import operator
 import multiprocessing as mp
+from collections import defaultdict
+import time
 from mutual_framework import network_generate
 from function_simulation_ode_mft  import all_state, transition_rule
 
@@ -28,18 +30,22 @@ def actual_simulation_network(G, N_actual, interaction_number, data_point, initi
     :returns: TODO
 
     """
-    
+    neighbors = defaultdict() 
+    for i in G.nodes():
+        neighbors[i] = list(G.neighbors(i))
     interval = int(interaction_number/data_point)
     state_single_evolution = np.zeros((data_point, len(state_single)))
     state = initial_state.copy()
     random_state = np.random.RandomState(comm_seed)
     speaker_list = random_state.choice(N_actual, size=interaction_number, replace=True)
-    #listener_list = [random_state.choice(G.neighbors(speaker_i)) for speaker_i in speaker_list]
+    listener_prelist = random_state.randint(0, N_actual, size=interaction_number)
 
     select_list = random_state.random(interaction_number)  # used to select one from more than one outcomes
     for i in range(interaction_number):
         speaker = speaker_list[i]
-        listener = random_state.choice(list(G.neighbors(speaker)))
+        #listener = random_state.choice(list(G.neighbors(speaker)))
+        #listener = neighbors[speaker][random_state.randint(len(neighbors[speaker]))]
+        listener = neighbors[speaker][listener_prelist[i] % len(neighbors[speaker])]
         speaker_state = state[speaker]
         listener_state = state[listener]
         transition_state_all = transition_rule(speaker_state, listener_state)
@@ -59,7 +65,7 @@ def actual_simulation_network(G, N_actual, interaction_number, data_point, initi
 
     des_file = des + f'comm_seed={comm_seed}.csv'
     df_data = pd.DataFrame(np.hstack((np.arange(0, interaction_number, interval).reshape(data_point, 1), state_single_evolution)))
-    df_data.to_csv(des_file, index=None, header=None)
+    #df_data.to_csv(des_file, index=None, header=None)
     return None
 
 def parallel_actual_simulation_network(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p):
@@ -116,7 +122,6 @@ def parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, 
     initial_state = ['a'] * ncA + functools.reduce(operator.iconcat, [[i] * ncC for i in state_Atilde_committed], []) + functools.reduce(operator.iconcat, [[i] * nC for i in state_Atilde_uncommitted], []) + [i for i in state_Atilde_uncommitted[:n_remaining]]
 
 
-
     des = f'../data/' + network_type + f'/N={N}_d={d}_netseed={net_seed}/actual_simulation/number_opinion={number_opinion}/interaction_number={interaction_number}_pA={pA}_p={p}/'
     if not os.path.exists(des):
         os.makedirs(des)
@@ -128,7 +133,7 @@ def parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, 
     return None
 
 
-cpu_number = 4
+cpu_number = 1
 
 N = 1000
 
@@ -144,18 +149,27 @@ network_type = 'SF'
 d_list = [[2.1, 0, 2], [2.5, 0, 3], [3.5, 0, 4]]
 net_seed_list = [[5, 5], [98, 98], [79, 79]]
 
+network_type = 'complete'
+net_seed_list = [0]
+d_list = [0]
+
 interaction_number = 1000000
 data_point = 1000
 number_opinion = 2
 pA = 0.06
 p = 0.03
 comm_seed_list = np.arange(10)
+comm_seed_list = np.arange(1)
 pA_list = np.round(np.arange(0.1, 0.11, 0.01), 2)
 pA_list = [0.056, 0.057, 0.058, 0.059]
-pA_list = np.round(np.arange(0.01, 0.11, 0.01), 2)
+pA_list = np.round(np.arange(0.01, 0.16, 0.01), 2)
+pA_list = [0.1]
 
+t1 = time.time()
 for d, net_seed in zip(d_list, net_seed_list):
     for pA in pA_list:
         #parallel_actual_simulation_network(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p)
         parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p)
         pass
+t2 = time.time()
+print(t2 - t1)
