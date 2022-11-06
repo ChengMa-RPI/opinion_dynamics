@@ -457,7 +457,7 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
     result_B_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xB_dominate)[-1]
     result_C_dominate = mft_evolution_approximation(number_opinion, committed_fraction, xC_dominate)[-1]
     if np.sum(np.abs(result_A_dominate - result_B_dominate)) < 1e-5:
-        result_B_dominate = np.hstack((np.array([0, 1-sum(committed_fraction)]), np.zeros(len(result_B_dominate) - 2) ))
+        result_B_dominate = np.hstack((np.array([0, 1-sum(committed_fraction), 0]), committed_fraction, np.zeros(len(result_B_dominate) - 5) ))
     if switch_direction == 'A-B':
         switch_threshold = result_B_dominate[1]
         x_simulation = result_A_dominate 
@@ -499,7 +499,6 @@ def parallel_actual_simulation_multi_opinion_switch(number_opinion, N, interacti
     p.close()
     p.join()
     return None
-
 
 def parallel_onecommitted(number_opinion, N, interaction_number, data_point, seed_list, pA):
     """TODO: Docstring for parallel_actual_simlation.
@@ -572,11 +571,11 @@ N_list = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 for N in N_list:
     interaction_number = N * 100000
     data_point = 100000
-    parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
+    #parallel_actual_simulation_two_opinion_switch(number_opinion, N, interaction_number, data_point, seed_list, pA, pB, switch_direction, approx_integer)
     pass
 
 
-pA = 0.12
+pA = 0.08
 p0 = 0.01
 number_opinion = 10
 switch_direction = 'B-A'

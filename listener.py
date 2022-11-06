@@ -180,7 +180,24 @@ def parallel_ode(N, committed_list, uncommitted_list, des_file):
     return None
 
 
-
+def permutation_different_time(a):
+    """TODO: Docstring for sum_permutation_matrix.
+    :a: TODO
+    :returns: TODO
+    """
+    pairwise_S = lambda x: sum(np.prod(x, 0))
+    height, width = np.shape(a)
+    if height == 1:
+        T = np.sum(a)
+    else:
+        T = permutation_different_time(a[:-1])  * sum(a[-1]) + (-1) ** (height-1) *  pairwise_S(a) * math.factorial(height-1)
+        height_list = np.arange(height-1)
+        for i in range(1, height-1):
+            all_combination = list(combinations(height_list, height-1-i))
+            for comb_i in all_combination:
+                index_S = list(set(height_list) - set(comb_i))
+                T += permutation_different_time(a[list(comb_i)])  * pairwise_S(np.vstack((a[index_S], a[-1]))) * (-1) ** i * math.factorial(i)
+    return T
 
 def mix_different_time(Q, number_opinion, x):
     """TODO: Docstring for function.
@@ -255,7 +272,7 @@ def recursive_different_time(number_opinion, p, x, t, des_file):
         x_history[-1] = x.copy()
     data = np.hstack((p, x_evolution[-1]))
     df_data = pd.DataFrame(data.reshape(1, len(data)))
-    df_data.to_csv(des_file, index=None, header=None, mode='a')
+    #df_data.to_csv(des_file, index=None, header=None, mode='a')
     return x_evolution, mix_evolution
 
 def recursive_different_time_repeat(number_opinion, p, x_history, Q_history, mix_sum, t):
@@ -487,6 +504,45 @@ def pA_critical_N_lowerbound(N_list, pAtilde, ode):
     return None
 
 
+def evolution_ode(number_opinion, p, x):
+    """TODO: Docstring for evolution_ode.
+
+    :number_opinion: TODO
+    :p: TODO
+    :x: TODO
+    :returns: TODO
+
+    """
+    c_matrix = change_rule(number_opinion)
+    length = 2**number_opinion -1 + number_opinion
+    initial = np.zeros((length))
+    initial[:number_opinion] =  x
+    initial[number_opinion: 2*number_opinion] = p
+
+    dt = 0.01
+    t = 300
+    tstep = np.arange(0, t, dt)
+    result = odeint(mf_ode, initial, tstep, args=(length, c_matrix))
+
+    t3 = time.time()
+    plt.plot(tstep, result[:, 0], linestyle='-.', linewidth=2, alpha = 0.8, label='$A$')
+    plt.plot(tstep, result[:, 1], linestyle='-.', linewidth=2, alpha = 0.8, label='$B$')
+    plt.plot(tstep, result[:, 2], linestyle='-.', linewidth=2, alpha = 0.8, label='$C$')
+    plt.plot(tstep, result[:, 3], linestyle='-.', linewidth=2, alpha = 0.8, label='$D$')
+    plt.plot(tstep, result[:, 4], linestyle='-.', linewidth=2, alpha = 0.8, label='$E$')
+    plt.plot(tstep, result[:, 5], linestyle='-.', linewidth=2, alpha = 0.8, label='$F$')
+    plt.xlabel('t', fontsize=fontsize)
+    plt.ylabel('$x$', fontsize=fontsize)
+    plt.xticks(fontsize=ticksize)
+    plt.yticks(fontsize=ticksize)
+    plt.subplots_adjust(left=0.18, right=0.82, wspace=0.25, hspace=0.25, bottom=0.20, top=0.98)
+
+    plt.legend(frameon=False, fontsize = legendsize)
+    plt.locator_params(nbins=5)
+    plt.show()
+
+
+
 
 
 number_opinion = 5
@@ -499,22 +555,43 @@ t2 = time.time()
 
 pA_list = np.arange(0.001, 0.12, 0.001)
 N_list = np.arange(3, 8, 1)
-pAtilde = 0.1
+pAtilde = 0.02
 ode = 1
 #pA_critical_N(pA_list, N_list, pAtilde, ode)
 
 max_fluctuation = 0.01
 seed_list = np.arange(100).tolist()
 #pA_critical_N_fluctuation(pA_list, N_list, pAtilde, max_fluctuation, seed_list, ode)
-#pA_critical_N_lowerbound(N_list, pAtilde, ode)
+pAtilde_list = [0.06, 0.14, 0.18]
+for pAtilde in pAtilde_list:
+    #pA_critical_N_lowerbound(N_list, pAtilde, ode)
+    pass
 
 alpha_list = np.array([1])
 seed_list = [0]
 
-pA_critical_N_fluctuation_dirichlet(pA_list, N_list, pAtilde, alpha_list, seed_list, ode)
+#pA_critical_N_fluctuation_dirichlet(pA_list, N_list, pAtilde, alpha_list, seed_list, ode)
+
+
+
+number_opinion = 6
+p = np.array([0.055, 0, 0.05, 0.03, 0.01, 0.01])
+p = np.array([0.055, 0, 0.025, 0.025, 0.025, 0.025])
+p = np.array([0.051, 0, 0.05, 0.03, 0.01, 0.01])
+x = np.array([0, 1-sum(p), 0, 0, 0, 0])
+#evolution_ode(number_opinion, p, x)
 
 """
 "mean-field"
+
+number_opinion = 6
+p = np.array([0.1, 0, 0.025, 0.025, 0.025, 0.025])
+x = np.array([0, 1-sum(p), 0, 0, 0, 0])
+dt = 0.01
+t = 100
+
+x_evolution, mix_evolution = recursive_different_time(number_opinion, p, x, t, '')
+
 c_matrix = change_rule(number_opinion)
 length = 2**number_opinion -1 + number_opinion
 initial = np.zeros((length))
@@ -522,14 +599,13 @@ initial[:number_opinion] =  x
 initial[number_opinion: 2*number_opinion] = p
 
 
-dt = 0.01
 tstep = np.arange(0, t, dt)
 result2 = odeint(mf_ode, initial, tstep, args=(length, c_matrix))
 
 t3 = time.time()
-plt.plot(np.arange(t), x_evolution[:, 0], 'tab:red', linestyle='-', linewidth=2, alpha = 0.8, label='iterations')
-plt.plot(np.arange(t), result1[:, 0], 'tab:blue', linestyle='--', linewidth=2, alpha=0.8, label='$\Delta t=1$')
-plt.plot(tstep, result2[:, 0], 'tab:green', linestyle='-.', linewidth=2, alpha = 0.8, label='$\Delta t=0.01$')
+plt.plot(np.arange(t), x_evolution[:, 2], '#66c2a5', linestyle='-', linewidth=2, alpha = 0.8, label='Recursive')
+#plt.plot(np.arange(t), result1[:, 0], 'tab:blue', linestyle='--', linewidth=2, alpha=0.8, label='$\Delta t=1$')
+plt.plot(tstep, result2[:, 2], '#fc8d62', linestyle='-.', linewidth=2, alpha = 0.8, label='ODEs')
 plt.xlabel('t', fontsize=fontsize)
 plt.ylabel('$x_C$', fontsize=fontsize)
 plt.xticks(fontsize=ticksize)
@@ -539,5 +615,4 @@ plt.subplots_adjust(left=0.18, right=0.82, wspace=0.25, hspace=0.25, bottom=0.20
 plt.legend(frameon=False, fontsize = legendsize)
 plt.locator_params(nbins=5)
 plt.show()
-
 """
