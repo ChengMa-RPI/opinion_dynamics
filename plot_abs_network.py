@@ -421,7 +421,10 @@ def plot_ratio_pAc_m(network_type_list, N, net_seed_list, d_list, interaction_nu
 
     """
     interaction_number = N * 1000
-    for network_type, net_seed, d in zip(network_type_list, net_seed_list, d_list):
+    linestyles = ['-', '--', 'dashdot'] * 2
+    markerstyles = ['o', '*', 's', 'd', 'p']
+    markersizes = [8, 10, 7, 8, 8]
+    for (i, network_type), net_seed, d in zip(enumerate(network_type_list), net_seed_list, d_list):
         if network_type == 'complete':
             labels = 'complete'
         elif network_type == 'ER':
@@ -434,7 +437,7 @@ def plot_ratio_pAc_m(network_type_list, N, net_seed_list, d_list, interaction_nu
                 R_pA.append(ratio)
             R_pA = np.array(R_pA)
             PA_critical.append(pA_list[np.where(R_pA >1/2)[0][0]])
-        plt.plot(number_opinion_list,  PA_critical,  '-', alpha=alpha, linewidth=lw, marker='o', label=labels)
+        plt.plot(number_opinion_list,  PA_critical,  linestyle=linestyles[i], alpha=alpha, linewidth=lw, marker=markerstyles[i], markersize=markersizes[i], label=labels)
     save_des = '../manuscript/031422/figure/'
     save_file = save_des + f'N={N}_p={p_list[0]}_pA_critical_m_ratio.png'
     plt.rc('font', size=ticksize)
@@ -541,15 +544,16 @@ number_opinion = 7
 p = 0.01
 #plot_ratio_pA_diffsize(network_type, N_list, net_seed, d, interaction_number, number_opinion, comm_seed_list, pA_list, p)
 #plot_x_pA_average_diffsize(network_type, N_list, net_seed, d, interaction_number, number_opinion, comm_seed_list, pA_list, p)
-N = 1000
+N = 10000
 network_type_list = ['ER', 'ER', 'ER', 'ER', 'complete']
 net_seed_list = [1, 0, 0, 0, 0]
 d_list = [3000, 4000, 8000, 16000, 0]
+d_list = [30000, 40000, 80000, 160000, 0]
 #plot_x_pA_average_networks(network_type_list, N, net_seed_list, d_list, interaction_number, number_opinion, comm_seed_list, pA_list, p)
 number_opinion_list = [2, 3, 4, 7]
 p_list = [0.06, 0.03, 0.02, 0.01]
 comm_seed_list = np.arange(50)
-#plot_ratio_pAc_m(network_type_list, N, net_seed_list, d_list, interaction_number, number_opinion_list, comm_seed_list, pA_list, p_list)
+plot_ratio_pAc_m(network_type_list, N, net_seed_list, d_list, interaction_number, number_opinion_list, comm_seed_list, pA_list, p_list)
 
 
 N = 1000
@@ -573,4 +577,4 @@ sigma_pu = 0
 sigma_p_list = [0, 0.1, 1, 10, 100]
 sigma_p_list = [0, 0.1, 100, 1, 10]
 sigma_pu_list = [0, 0, 0, 0, 0]
-plot_ratio_pA_fluctuate(network_type, N, net_seed, d, interaction_number, number_opinion, comm_seed_list, pA_list, p, fluctuation_seed, sigma_p_list, sigma_pu_list)
+#plot_ratio_pA_fluctuate(network_type, N, net_seed, d, interaction_number, number_opinion, comm_seed_list, pA_list, p, fluctuation_seed, sigma_p_list, sigma_pu_list)
