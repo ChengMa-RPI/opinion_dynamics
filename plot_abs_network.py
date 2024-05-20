@@ -286,9 +286,8 @@ def plot_ratio_pA_fluctuate(network_type, N, net_seed, d, interaction_number, nu
     plt.subplots_adjust(left=0.18, right=0.92, wspace=0.25, hspace=0.25, bottom=0.15, top=0.92)
     plt.legend(frameon=False, fontsize = legendsize * 0.8, markerscale=1.0, loc=2)
     plt.locator_params(nbins=6)
-    plt.savefig(save_des)
-    plt.close('all')
-    #plt.show()
+    #plt.savefig(save_des)
+    plt.show()
 
     return None
 
@@ -488,9 +487,6 @@ net_seed = 0
 d = 8000
 
 
-
-
-
 number_opinion = 5
 pA = 0.07
 pA_list = [0.02, 0.03, 0.04, 0.05]
@@ -553,7 +549,7 @@ d_list = [30000, 40000, 80000, 160000, 0]
 number_opinion_list = [2, 3, 4, 7]
 p_list = [0.06, 0.03, 0.02, 0.01]
 comm_seed_list = np.arange(50)
-plot_ratio_pAc_m(network_type_list, N, net_seed_list, d_list, interaction_number, number_opinion_list, comm_seed_list, pA_list, p_list)
+#plot_ratio_pAc_m(network_type_list, N, net_seed_list, d_list, interaction_number, number_opinion_list, comm_seed_list, pA_list, p_list)
 
 
 N = 1000
@@ -577,4 +573,4 @@ sigma_pu = 0
 sigma_p_list = [0, 0.1, 1, 10, 100]
 sigma_p_list = [0, 0.1, 100, 1, 10]
 sigma_pu_list = [0, 0, 0, 0, 0]
-#plot_ratio_pA_fluctuate(network_type, N, net_seed, d, interaction_number, number_opinion, comm_seed_list, pA_list, p, fluctuation_seed, sigma_p_list, sigma_pu_list)
+plot_ratio_pA_fluctuate(network_type, N, net_seed, d, interaction_number, number_opinion, comm_seed_list, pA_list, p, fluctuation_seed, sigma_p_list, sigma_pu_list)

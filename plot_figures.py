@@ -116,20 +116,31 @@ def basin_attraction_number(committed_fraction):
     :returns: TODO
 
     """
-    #des_file = f'../data/num_opinion={number_opinion}/committed_fraction={committed_fraction}.csv' 
-    des_file = f'../data/num_opinion={number_opinion}/strong_committed_fraction={committed_fraction}.csv' 
+    colors = ['tab:blue', 'tab:brown', 'tab:green']
+    des_file = f'../data/num_opinion={number_opinion}/committed_fraction={committed_fraction}.csv' 
+    #des_file = f'../data/num_opinion={number_opinion}/strong_committed_fraction={committed_fraction}.csv' 
     data = np.array(pd.read_csv(des_file, header=None))
     initial_condition = data[:, :3]
     attractors = data[:, 3:]
+    attractors = np.round(attractors, 2)
     attractor_unique = np.unique(attractors, axis=0)
-    for attractor, i in zip(attractor_unique, range(len(attractor_unique))):
+    for attractor, i in zip(attractor_unique[::-1], range(len(attractor_unique))):
+        attractor = np.round(attractor, 2)
         index = np.where(np.sum(attractor==attractors, 1) == 3)[0]
         xy = initial_condition[index, :3]
         x = xy[:, 0]
         y = xy[:, 1]
         label = f's{i+1}'
         label = '(' + '{0:g}'.format(abs(attractor[0])) + ',' + '{0:g}'.format(abs(attractor[1])) +',' + '{0:g}'.format(abs(attractor[2])) + ')'
-        plt.plot(x, y, '.', alpha=alpha, label=label)
+        if sorted(attractor)[1] == sorted(attractor)[2]:
+            continue
+        elif attractor[0]  == max(attractor[:3]):
+            color='tab:red'
+        elif attractor[1]  == max(attractor[:3]):
+            color='tab:blue'
+        elif attractor[2]  == max(attractor[:3]):
+            color='tab:orange'
+        plt.plot(x, y, '.', alpha=alpha, label=label, color=color)
     plt.axis('square')
     plt.xlabel('$x_A(0)$', fontsize=fontsize)
     plt.ylabel('$x_B(0)$', fontsize=fontsize)
@@ -140,7 +151,7 @@ def basin_attraction_number(committed_fraction):
     plt.locator_params(nbins=5)
 
     filename  = '[' + '{0:g}'.format(abs(committed_fraction[0])) + ', ' + '{0:g}'.format(abs(committed_fraction[1])) +', ' + '{0:g}'.format(abs(committed_fraction[2])) + ']'
-    save_des = f'../report/report012321/committed_fraction=' + filename + '.png'
+    save_des = f'../figure/basin_attr_p={committed_fraction}.png'
     plt.savefig(save_des)
     #plt.close('all')
     plt.show()
@@ -188,7 +199,6 @@ def attractor_value(number_opinion, pA_fix, pB_fix):
 
     #plt.show()
 
-    save_des = f'../report/report012321/bifurcation_p={p_fix}.png'
     #plt.savefig(save_des)
     #plt.close('all')
     #plt.show()
@@ -415,7 +425,7 @@ def compare_reduce(number_opinion, p_notA):
     #plt.savefig(save_des)
     #plt.close('all')
 
-def pA_pcA_p(number_opinion, p_B_plot):
+def pA_pcA_p(number_opinion, p_B_plot, plot_ABC):
     """plot P_A with P_{cA} for different p_{cB}
 
     :number_opinion: the number of opinions
@@ -427,20 +437,32 @@ def pA_pcA_p(number_opinion, p_B_plot):
     p_cB = np.round(data[:, 1], 4)
     x_A = data[:, -number_opinion]
     x_B = data[:, -number_opinion+1]
-    if number_opinion == 3:
-        label = '$P_C=$' + str(p)
-    else:
-        label = f'$p={p}$'
+    x_C = data[:, -number_opinion+2]
     for p in p_B_plot:
         index_p = np.where(p_cB == p)[0]
         p_cA_p = p_cA[index_p]
+        p_cB_p = p_cB[index_p]
         x_A_p = x_A[index_p]
         x_B_p = x_B[index_p]
+        x_C_p = x_C[index_p]
         index_sort = np.argsort(p_cA_p)
-        y = x_A_p[index_sort] + p_cA_p[index_sort]
+        if number_opinion == 3:
+            label = '$P_C=$' + str(p)
+        else:
+            label = f'$p={p}$'
+        if plot_ABC == 'A':
+            y = x_A_p[index_sort] + p_cA_p[index_sort]
+            ylabel = '$n_A$'
+        elif plot_ABC == 'B':
+            y = x_C_p[index_sort]
+            ylabel = '$n_B$'
+        elif plot_ABC == 'C':
+            y = x_B_p[index_sort] + p_cB_p[index_sort]
+            ylabel = '$n_C$'
+
         plt.plot(p_cA_p[index_sort], y, '-.', linewidth=lw, alpha=alpha, label=label)
     plt.xlabel('$P_{A}$', fontsize=fontsize)
-    plt.ylabel('$n_A$', fontsize=fontsize)
+    plt.ylabel(ylabel, fontsize=fontsize)
     #plt.subplots_adjust(left=0.17, right=0.76, wspace=0.25, hspace=0.25, bottom=0.15, top=0.98)
     plt.xticks(fontsize=ticksize)
     plt.yticks(fontsize=ticksize)
@@ -448,9 +470,12 @@ def pA_pcA_p(number_opinion, p_B_plot):
     plt.legend(frameon=False, fontsize = legendsize, markerscale=1.0, loc='lower right', bbox_to_anchor=(1.48, -0.10) )
     #legend = plt.legend(frameon=False, fontsize = legendsize, loc='upper right', markerscale=1.5, bbox_to_anchor=(1.45, 1.))
     plt.locator_params(nbins=5)
-    plt.show()
+    save_des = f'../figure0213/n{plot_ABC}_PA_N=3.png'
+    plt.savefig(save_des)
+    plt.close()
+    #plt.show()
 
-def pA_pcA_p_approximation(number_opinion, p_not_A):
+def pA_pcA_p_approximation(number_opinion, p_not_A, plot_ABC):
     """plot P_A with P_{cA} for different p_{cB}
 
     :number_opinion: 4
@@ -467,14 +492,28 @@ def pA_pcA_p_approximation(number_opinion, p_not_A):
     for p in p_not_A:
         index_p = np.where(p_not_cA == p)[0]
         p_cA_p = p_cA[index_p]
+        p_not_cA_p = p_not_cA[index_p]
         x_A_p = x_A[index_p]
         x_B_p = x_B[index_p]
+        x_not_A_p = x_not_A[index_p]
         index_sort = np.argsort(p_cA_p)
-        y = x_A_p[index_sort] + p_cA_p[index_sort]
+        if plot_ABC == 'A':
+            y = x_A_p[index_sort] + p_cA_p[index_sort]
+            ylabel = '$n_A$'
+        elif plot_ABC == 'B':
+            y = x_B_p[index_sort] 
+            ylabel = '$n_B$'
+        elif plot_ABC == 'C':
+            y = x_not_A_p[index_sort] / (number_opinion-2) + p_not_cA_p[index_sort] / (number_opinion-2)
+            ylabel = '$n_C$'
+        elif plot_ABC == 'A_tilde':
+            y = x_not_A_p[index_sort] + p_not_cA_p[index_sort] 
+            ylabel = '$n_{\\tilde{A}}$'
+
         #y = x_B_p[index_sort]
         plt.plot(p_cA_p[index_sort], y, '-.', linewidth=lw, alpha=alpha, label='$P_{\\tilde{A}}=$' + str(p))
     plt.xlabel('$P_{A}$', fontsize=fontsize)
-    plt.ylabel('$n_A$', fontsize=fontsize)
+    plt.ylabel(ylabel, fontsize=fontsize)
     #plt.subplots_adjust(left=0.17, right=0.76, wspace=0.25, hspace=0.25, bottom=0.15, top=0.98)
     plt.xticks(fontsize=ticksize)
     plt.yticks(fontsize=ticksize)
@@ -483,7 +522,10 @@ def pA_pcA_p_approximation(number_opinion, p_not_A):
     plt.legend(frameon=False, fontsize = legendsize, markerscale=1.0, loc='lower right', bbox_to_anchor=(1.48, -0.10) )
     #plt.legend(frameon=False, fontsize = legendsize, markerscale=3.0)
     plt.locator_params(nbins=5)
-    plt.show()
+    save_des = f'../figure0213/n{plot_ABC}_PA_N={number_opinion}.png'
+    plt.savefig(save_des)
+    plt.close()
+    #plt.show()
 
 def pA_pcA_N(number_opinion_list, p):
     """plot P_A with P_{cA} for different p_{cB}
@@ -550,7 +592,7 @@ def fluctuate_oneuncommitted(number_opinion, p, sigma, seed_list, normalization)
     plt.locator_params(nbins=5)
     #plt.show()
 
-def tipping_point_pmax_fluctuate(number_opinion, p, sigma, seed_list, normalization):
+def tipping_point_pmax_fluctuate(number_opinion, p, sigma, seed_list, normalization, xplot):
     """TODO: Docstring for fluctuate_oneuncommitted.
 
     :number_opinion: TODO
@@ -579,16 +621,25 @@ def tipping_point_pmax_fluctuate(number_opinion, p, sigma, seed_list, normalizat
             if np.max(change) > 0.5 * np.ptp(y):
                 tipping_index = np.where(np.max(change) == change)[0][0]
                 p_cA_tipping = p_cA[index_sort][tipping_index]
-                if (p_cA_tipping - np.max(p_cAtilde))>=-1e-1: 
-                    p_cA_tipping_list.append(p_cA_tipping)
-                    p_cA_tilde_list.append(np.max(p_cAtilde))
-                    #p_cA_tilde_list.append(np.std(p_cAtilde))
+                if xplot == 'max':
+                    if (p_cA_tipping - np.max(p_cAtilde))>=-1e-1: 
+                        p_cA_tipping_list.append(p_cA_tipping)
+                        p_cA_tilde_list.append(np.max(p_cAtilde))
+                elif xplot == 'sd':
+                    if (p_cA_tipping - np.max(p_cAtilde))>=1e-5: 
+                        p_cA_tipping_list.append(p_cA_tipping)
+                        p_cA_tilde_list.append(np.std(p_cAtilde))
 
                 
     plt.plot(p_cA_tilde_list, p_cA_tipping_list, '.', linewidth=lw, alpha=alpha, label=f'$p_0={p}$')
     #plt.plot(p_cA_tilde_list, p_cA_tipping_list, '.', linewidth=lw, alpha=alpha, label=f'$\\sigma={sigma}$')
-    plt.xlabel('max$(P_i)$', fontsize=fontsize)
-    #plt.xlabel('$SD(P_i)$', fontsize=fontsize)
+    if xplot == 'max':
+        plt.xlabel('max$(P_i)$', fontsize=fontsize)
+    elif xplot == 'sd':
+        plt.xlabel('$SD(P_i)$', fontsize=fontsize)
+    else:
+        print('no available method')
+
     plt.ylabel('$P_{A}^{(c)}$', fontsize=fontsize)
     #plt.subplots_adjust(left=0.17, right=0.76, wspace=0.25, hspace=0.25, bottom=0.15, top=0.98)
     plt.xticks(fontsize=ticksize)
@@ -1593,10 +1644,19 @@ def peak_A(number_opinion):
     #plt.show()
     return None
 
-committed_fraction = np.round(np.array([0.1, 0.1, 0.05]), 2)
-p_fix = 0.16
+"SI F2, the basin of attraction for m=3"
+committed_fraction = np.round(np.array([0.01, 0.01, 0.05]), 2)
+committed_fraction = np.round(np.array([0, 0, 0]), 2)
+committed_fraction = np.round(np.array([0.16, 0.15, 0.01]), 2)
+committed_fraction = np.round(np.array([0.14, 0.13, 0.01]), 2)
+committed_fraction = np.round(np.array([0.08, 0.07, 0.06]), 2)
+committed_fraction = np.round(np.array([0.08, 0.02, 0.01]), 2)
+committed_fraction = np.round(np.array([0.02, 0.01, 0]), 2)
+committed_fraction = np.round(np.array([0.1, 0.04, 0.01]), 2)
 
+p_fix = 0.16
 #attractors = basin_attraction_number(committed_fraction)
+
 #pqr_committed(number_opinion)
 p_list = [0]
 p_list = np.round(np.arange(0, 0.4, 0.02), 2)
@@ -1618,26 +1678,42 @@ for pA_fix in p_list:
         #attractor_value(number_opinion, pA_fix, pB_fix)
         pass
 
-p_B_plot = np.round(np.arange(0, 0.3, 0.03), 4)
-pA_pcA_p(3, p_B_plot)
-number_opinion_list = [3, 4, 6, 8]
-#pA_pcA_N(number_opinion_list, 0.3)
+"Figure 2, change plot_ABC to show the fraction of any one the opinions v.s. p_A"
+number_opinion = 3
+p_B_plot = np.round(np.arange(0, 0.3, 0.03), 4 )
+plot_ABC = 'B'
+#pA_pcA_p(number_opinion, p_B_plot, plot_ABC)
 
+
+"Figure 3, change number_opinion from 4 (Fig 3a) to 9 (Fig 3f)"
 p_not_A = np.round(np.arange(0, 0.4, 0.04), 3)
-number_opinion = 9
-#pA_pcA_p_approximation(number_opinion, p_not_A)
-p = 0.035
-sigma = 0.02
-p_list = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06, 0.065]
-p_list = [0.02, 0.03, 0.04, 0.05]
-sigma_list = [0.02]
-seed_list = np.arange(100).tolist()
+plot_ABC = 'A_tilde'
+number_opinion = 4
+for number_opinion in [5, 6, 7, 8, 9]:
+    for plot_ABC in ['A', 'B', 'A_tilde', 'C']:
+        pA_pcA_p_approximation(number_opinion, p_not_A, plot_ABC)
+
+
+"Figure 5, change number_opinion from 4 (Fig 5a) to 6 (Fig 5c)"
+seed_list = np.arange(100)
 normalization = 1
-#fluctuate_oneuncommitted(number_opinion, p, sigma, seed_list, normalization)
+xplot = 'max'
+sigma = 0.02
+p_list = [0.02, 0.03, 0.04, 0.05]
+number_opinion = 4
 for p in p_list:
-#for sigma in sigma_list:
-    #tipping_point_pmax_fluctuate(6, p, sigma, seed_list, normalization)
+    #tipping_point_pmax_fluctuate(number_opinion, p, sigma, seed_list, normalization, xplot)
     pass
+
+"Figure 5, change number_opinion from 4 (Fig 5d) to 6 (Fig 5f)"
+xplot = 'sd'
+sigma = 0.02
+p_list = [0.02, 0.03, 0.04]
+number_opinion = 6
+for p in p_list:
+    #tipping_point_pmax_fluctuate(number_opinion, p, sigma, seed_list, normalization, xplot)
+    pass
+
 approximation = 1
 number_opinion_list = [3]
 for number_opinion in number_opinion_list:
@@ -1646,12 +1722,16 @@ for number_opinion in number_opinion_list:
     pass
 #tipping_point_fluctuate(number_opinion, p_list, sigma, seed_list, normalization)
 #plt.show()
+
+"plot figure 4b"
 approximation = 1
 number_opinion_list = [4, 5, 6, 7, 8, 9]
 for number_opinion in number_opinion_list:
     #tipping_point(number_opinion, approximation)
-    #tipping_point_two(number_opinion, approximation)
     pass
+
+
+number_opinion = 5
 p_list = np.round(np.arange(0.005, 0.065, 0.001), 4)
 #fluctuate_lowerbound(number_opinion, p_list)
 sigma=0.02

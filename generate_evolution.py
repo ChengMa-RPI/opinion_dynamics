@@ -1,21 +1,16 @@
 import os
 os.environ['OPENBLAS_NUM_THREADS'] ='1'
-import sys
-sys.path.insert(1, '/home/mac/RPI/research/')
-
 import numpy as np 
 import pandas as pd
 import networkx as nx
-import matplotlib.pyplot as plt
 from collections import Counter
 import functools
 import operator
 import multiprocessing as mp
 from collections import defaultdict
 import time
-from mutual_framework import network_generate
-from function_simulation_ode_mft  import all_state, transition_rule
-
+#from mutual_framework import network_generate
+from helper_function  import all_state, transition_rule, network_generate
 
 def actual_simulation_network(neighbors, N_actual, interaction_number, data_point, initial_state, state_single, comm_seed, des):
     """TODO: Docstring for actual_simulation.
@@ -113,37 +108,6 @@ def actual_simulation_complete(N, interaction_number, data_point, initial_state,
     df_data.to_csv(des_file, index=None, header=None)
     return None
 
-
-def parallel_actual_simulation_network(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p):
-    """TODO: Docstring for parallel_actual_simlation.
-
-    :arg1: TODO
-    :returns: TODO
-
-    """
-    A, A_interaction, index_i, index_j, cum_index = network_generate(network_type, N, 1, 0, net_seed, d)
-    N_actual = len(A)
-    G = nx.from_numpy_array(A)
-
-    nA = int(N_actual * pA)
-    nC = int(N_actual * p)
-    nB = int(N_actual - nA - nC * (number_opinion - 2))
-    state_list = all_state(number_opinion)
-    state_single = state_list[0: number_opinion]
-    state_committed = state_list[number_opinion: 2*number_opinion]
-    state_Atilde = state_committed[2:] 
-    initial_state = ['a'] * nA + ['B'] * nB  + functools.reduce(operator.iconcat, [[i] * nC for i in state_Atilde], [])
-
-    des = f'../data/' + network_type + f'/N={N}_d={d}_netseed={net_seed}/actual_simulation/number_opinion={number_opinion}/interaction_number={interaction_number}_pA={pA}_p={p}/'
-    if not os.path.exists(des):
-        os.makedirs(des)
-
-    p = mp.Pool(cpu_number)
-    p.starmap_async(actual_simulation_network, [( G, N_actual, interaction_number, data_point, initial_state, state_single, comm_seed, des) for comm_seed in comm_seed_list]).get()
-    p.close()
-    p.join()
-    return None
-
 def parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p, fluctuate_seed=0, sigma_p=0, sigma_pu=0):
     """TODO: Docstring for parallel_actual_simlation.
 
@@ -194,7 +158,6 @@ def parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, 
             seed_pu += 1
 
     nc_minority =  np.array(np.round(N_actual * p_fluctuate), int)
-    print(nc_minority)
     nuc_minority =  np.array(np.round(N_actual * pu_fluctuate), int)
     nuc_remaining = N_actual - ncA - nc_minority.sum() - nuc_minority.sum()
     if nuc_remaining // minority:
@@ -203,8 +166,10 @@ def parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, 
 
     initial_state = ['a'] * ncA + functools.reduce(operator.iconcat, [[i] * nc for i, nc in zip(state_Atilde_committed, nc_minority)], []) + functools.reduce(operator.iconcat, [[i] * nuc for i, nuc in zip(state_Atilde_uncommitted, nuc_minority)], []) + [i for i in state_Atilde_uncommitted[:nuc_remaining]]
 
-
-    des = f'../data/' + network_type + f'/N={N}_d={d}_netseed={net_seed}/actual_simulation_fluctuate/fluctuate_seed={fluctuate_seed}_sigma_p={sigma_p}_sigma_pu={sigma_pu}/number_opinion={number_opinion}/interaction_number={interaction_number}_pA={pA}_p={p}/'
+    if fluctuate_seed==0 and sigma_p==0 and sigma_pu==0:
+        des = f'../data/' + network_type + f'/N={N}_d={d}_netseed={net_seed}/actual_simulation/number_opinion={number_opinion}/interaction_number={interaction_number}_pA={pA}_p={p}/'
+    else:
+        des = f'../data/' + network_type + f'/N={N}_d={d}_netseed={net_seed}/actual_simulation_fluctuate/fluctuate_seed={fluctuate_seed}_sigma_p={sigma_p}_sigma_pu={sigma_pu}/number_opinion={number_opinion}/interaction_number={interaction_number}_pA={pA}_p={p}/'
     if not os.path.exists(des):
         os.makedirs(des)
 
@@ -218,41 +183,59 @@ def parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, 
     return None
 
 
+"""
+Parameters explained
+network_type, N, d, net_seed are used in the function network_generate to generate networks.
+network_type: complete--complete graph, ER--ER network, SF--scale free network
+N: the number of nodes/agents in the network to exchange opinions
+d: the parameter to control the network generation, 
+0 for complete graph (no meaning), 
+an integer for ER network, determining the edge density, k=d * 2 / N, 
+a list for Scale-free network, [gamma, kmax, kmin], gamma is the scale free exponent paramter, kmax=0 means no restriction on the maximum of degree
+net_seed: random seed to generate graph
+
+cpu_number: the number of CPUs used for parallel computing
+interaction_number: the number of interactions between agents to exchange opinions, usually a very large number to make sure that the system reaches the equilibrium
+data_point: the number of data points to save to the predefined destination instead of all interaction process, much less than the interaction number
+number_opinion: the number of single opinions, "m"
+comm_seed: the random seed to select agents for exchanging opinions
+pA: the fraction of committed agents supporting opinion A
+p: the fraction of committed agents supporting minority B, C, D, ...
+number_opinion: the number of single opinions, "m"
+comm_seed: the random seed to select agents for exchanging opinions
+pA: the fraction of committed agents supporting opinion A
+p: the fraction of committed agents supporting minority B, C, D, ...
+"""
+
 cpu_number = 8
-
 N = 1000
-interaction_number = N * 1000
+interaction_number = 1000 * 1000
 
-
-network_type = 'SF'
-d_list = [[2.1, 0, 2], [2.5, 0, 3], [3.5, 0, 4]]
-net_seed_list = [[5, 5], [98, 98], [79, 79]]
-
+"complete graph"
 network_type = 'complete'
 net_seed_list = [0]
 d_list = [0]
 
+"Scale-free network of different power-law exponent"
+network_type = 'SF'
+d_list = [[2.1, 0, 2], [2.5, 0, 3], [3.5, 0, 4]]
+net_seed_list = [[5, 5], [98, 98], [79, 79]]  # networks of these selected random seeds have the connected component with nodes close to N
+
+d_list = [[3.8, 0, 5]]
+net_seed_list = [[0, 0]]  # networks of these selected random seeds have the connected component with nodes close to N
+
+"ER networks of different edge densities"
 network_type = 'ER'
-net_seed_list = [1, 0, 0]
-d_list = [3000, 4000, 8000]
+net_seed_list = [1, 0, 0, 0]
+d_list = [3000, 4000, 8000, 16000]
 
 data_point = 1000
 number_opinion = 5
-pA = 0.06
 p = 0.03
-comm_seed_list = np.arange(10)
-comm_seed_list = np.arange(50)
-pA_list = np.round(np.arange(0.1, 0.11, 0.01), 2)
-pA_list = [0.056, 0.057, 0.058, 0.059]
+comm_seed_list = np.arange(50)  # for averaging effect, multiple communication seeds to generate random realizations of naming game interaction
 pA_list = np.round(np.arange(0.01, 0.11, 0.01), 2)
-number_opinion = 5
-p = 0.015
-sigma_p_list = [0, 0.1, 1, 10, 100]
-sigma_pu = 0
-fluctuate_seed = 0
+pA_list = [0.01, 0.02]
 for d, net_seed in zip(d_list, net_seed_list):
     for pA in pA_list:
-        #parallel_actual_simulation_network(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p)
+        parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p)
         pass
-        for sigma_p in sigma_p_list:
-            parallel_actual_simulation_network_multi_opinion(network_type, N, net_seed, d, interaction_number, data_point, number_opinion, comm_seed_list, pA, p, fluctuate_seed=fluctuate_seed, sigma_p=sigma_p, sigma_pu=sigma_pu)

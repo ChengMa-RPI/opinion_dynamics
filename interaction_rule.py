@@ -568,6 +568,35 @@ def parallel_attractors(number_opinion, committed_fraction_list, single_fraction
     p.join()
     return None
 
+def basin_attraction_strong(number_opinion, committed_fraction):
+    """TODO: Docstring for basin_attraction.
+
+    :number_opinion: TODO
+    :committed_fraction: TODO
+    :single_fraction: TODO
+    :returns: TODO
+
+    """
+    data = []
+    uncommitted_fraction = np.round(1 - sum(committed_fraction), digit)
+    length = 2**number_opinion -1 + number_opinion
+    coefficient = change_rule(number_opinion)
+    c_matrix = np.round(coefficient.reshape(length, length, length).transpose(2, 0, 1) , 15)
+    for a in np.arange(0, uncommitted_fraction+1e-6, 0.01):
+        for b in np.arange(0+1e-3, uncommitted_fraction-a+1e-6, 0.01):
+            c = uncommitted_fraction-a-b
+            single_fraction = np.round(np.array([a, b, c]), 3)
+            attractor = ode_stable(number_opinion, committed_fraction, single_fraction, c_matrix)
+            attractor = np.round(attractor, 4)
+            data.append(np.hstack((single_fraction, attractor)))
+
+    df_data = pd.DataFrame(np.vstack((data)))
+    des = f'../data/num_opinion={number_opinion}/'
+    #des_file = des + f'committed_fraction={committed_fraction}.csv' 
+    des_file = des + f'strong_committed_fraction={committed_fraction}.csv' 
+    df_data.to_csv(des_file, index=None, header=None)
+    return None
+
 def basin_attraction(number_opinion, committed_fraction):
     """TODO: Docstring for basin_attraction.
 
@@ -582,8 +611,8 @@ def basin_attraction(number_opinion, committed_fraction):
     length = 2**number_opinion -1 + number_opinion
     coefficient = change_rule(number_opinion)
     c_matrix = np.round(coefficient.reshape(length, length, length).transpose(2, 0, 1) , 15)
-    for a in np.arange(0, uncommitted_fraction+1e-6, 0.1):
-        for b in np.arange(0+1e-3, uncommitted_fraction-a+1e-6, 0.1):
+    for a in np.arange(0, uncommitted_fraction+1e-6, 0.01):
+        for b in np.arange(0, uncommitted_fraction-a+1e-6, 0.01):
             c = uncommitted_fraction-a-b
             single_fraction = np.round(np.array([a, b, c]), 3)
             attractor = ode_stable(number_opinion, committed_fraction, single_fraction, c_matrix)
@@ -592,8 +621,8 @@ def basin_attraction(number_opinion, committed_fraction):
 
     df_data = pd.DataFrame(np.vstack((data)))
     des = f'../data/num_opinion={number_opinion}/'
-    #des_file = des + f'committed_fraction={committed_fraction}.csv' 
-    des_file = des + f'strong_committed_fraction={committed_fraction}.csv' 
+    des_file = des + f'committed_fraction={committed_fraction}.csv' 
+    #des_file = des + f'strong_committed_fraction={committed_fraction}.csv' 
     df_data.to_csv(des_file, index=None, header=None)
     return None
 
@@ -1834,7 +1863,7 @@ def small_committed_approximation(number_opinion, pA_list, p_list):
     
 
 
-number_opinion = 5
+number_opinion = 3
 digit = 4
 
 committed_fraction_list = []
@@ -1846,10 +1875,16 @@ for p in np.arange(0, 0.15, 0.01):
 committed_fraction_list = np.round(np.vstack((committed_fraction_list)), digit)
 
 
-committed_fraction = np.round(np.array([0.19, 0, 0.18]), digit)
+committed_fraction = np.round(np.array([0.01, 0.01, 0.05]), digit)
+committed_fraction = np.round(np.array([0.14, 0.13, 0.12]), digit)
+committed_fraction = np.round(np.array([0.14, 0.13, 0.01]), digit)
+committed_fraction = np.round(np.array([0.08, 0.07, 0.06]), digit)
+committed_fraction = np.round(np.array([0.08, 0.02, 0.01]), digit)
+committed_fraction = np.round(np.array([0.02, 0.01, 0]), digit)
+committed_fraction = np.round(np.array([0.1, 0.04, 0.01]), digit)
 initial_single = np.array([0., 1-sum(committed_fraction), 0])
 #one_realization(3, committed_fraction, initial_single)
-#basin_attraction(number_opinion, committed_fraction)
+basin_attraction(number_opinion, committed_fraction)
 t1 = time.time()
 #attractor_list = attractors(number_opinion, committed_fraction, '../data')
 t2 = time.time()
@@ -1934,8 +1969,8 @@ gamma_list = [0.7, 0.8, 0.9]
 number_opinion_list = [5]
 for number_opinion in number_opinion_list:
     for gamma in gamma_list:
-        print(gamma)
         #original_gamma_random(number_opinion, gamma, num_iter, seed =0)
+        pass
 
 pA_list = np.round(np.arange(0.05, 0.17, 0.01) + 1e-10, 11)
 pAtilde_list = np.round(np.arange(0.01, 0.2, 0.01), 3)
@@ -1962,7 +1997,7 @@ committed_fraction = np.round(np.array([0.251, 0, 0.249]), digit)
 initial_single = np.array([0.5, 1-sum(committed_fraction)-0.5, 0])    
 #initial_single = np.array([1, 0, 1, 1])  * (1-sum(committed_fraction))/3
 
-result = small_committed(3, committed_fraction, initial_single)
+#result = small_committed(3, committed_fraction, initial_single)
 pA_list = [0.12, 0.14, 0.16, 0.18]
 p_list = np.array([0.01, 0.02, 0.03, 0.04])
 #small_committed_approximation(22, pA_list, p_list)
